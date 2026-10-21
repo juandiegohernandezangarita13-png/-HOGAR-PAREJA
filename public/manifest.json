@@ -1,0 +1,19 @@
+{
+  "name": "ComprAI - Lista de Compra en Pareja",
+  "short_name": "ComprAI",
+  "description": "Lista de la compra y despensa inteligente sincronizada en tiempo real",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
