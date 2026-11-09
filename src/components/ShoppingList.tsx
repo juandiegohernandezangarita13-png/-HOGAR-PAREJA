@@ -6,8 +6,6 @@ import {
   ArrowRight, 
   Sparkles, 
   Search, 
-  Filter, 
-  Minus,
   PackageCheck
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -21,12 +19,15 @@ export const ShoppingList: React.FC = () => {
     removeShoppingItem,
     clearCompletedShoppingItems,
     moveCompletedToPantry,
+    t,
+    getCategoryName,
+    language,
   } = useApp();
 
   const [inputName, setInputName] = useState('');
   const [inputCategory, setInputCategory] = useState<string>('');
   const [inputQuantity, setInputQuantity] = useState(1);
-  const [inputUnit, setInputUnit] = useState('ud');
+  const [inputUnit, setInputUnit] = useState(language === 'pl' ? 'szt' : 'ud');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilterCategory, setSelectedFilterCategory] = useState<string>('all');
 
@@ -77,10 +78,10 @@ export const ShoppingList: React.FC = () => {
       <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-5 text-white shadow-lg shadow-emerald-900/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <span>🛒 Lista de la Compra</span>
+            <span>{t.shoppingTitle}</span>
           </h2>
           <p className="text-emerald-100 text-sm mt-0.5">
-            {pendingItems.length} artículos por comprar • {completedItems.length} ya en el carrito
+            {pendingItems.length} {t.shoppingPendingCount} • {completedItems.length} {t.shoppingCompletedCount}
           </p>
         </div>
 
@@ -90,7 +91,7 @@ export const ShoppingList: React.FC = () => {
             className="flex items-center gap-2 bg-white text-emerald-800 font-bold px-4 py-2.5 rounded-xl shadow-sm hover:bg-emerald-50 transition transform hover:-translate-y-0.5 active:translate-y-0 text-sm cursor-pointer"
           >
             <PackageCheck className="w-4 h-4 text-emerald-600" />
-            <span>Pasar {completedItems.length} comprados a la Despensa</span>
+            <span>{t.moveToPantryBtn} ({completedItems.length})</span>
             <ArrowRight className="w-4 h-4 text-emerald-500" />
           </button>
         )}
@@ -107,14 +108,14 @@ export const ShoppingList: React.FC = () => {
               type="text"
               value={inputName}
               onChange={handleNameChange}
-              placeholder="Añadir artículo (ej: Plátanos, Salmón, Leche entera, Arroz...)"
+              placeholder={t.addItemPlaceholder}
               className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
               autoFocus
             />
             {inputCategory && (
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-emerald-100 text-emerald-800 font-medium px-2 py-0.5 rounded-md flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-emerald-600" />
-                {CATEGORIES[inputCategory]?.name.split(' ')[0] || 'Auto'}
+                {getCategoryName(inputCategory)}
               </span>
             )}
           </div>
@@ -124,12 +125,12 @@ export const ShoppingList: React.FC = () => {
             <select
               value={inputCategory}
               onChange={(e) => setInputCategory(e.target.value)}
-              className="px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-[140px]"
+              className="px-3 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 max-w-[150px]"
             >
-              <option value="">Categoría (Auto)</option>
+              <option value="">{t.categoryAuto}</option>
               {CATEGORY_LIST.map((cat) => (
                 <option key={cat.id} value={cat.id}>
-                  {cat.name}
+                  {getCategoryName(cat.id)}
                 </option>
               ))}
             </select>
@@ -149,10 +150,11 @@ export const ShoppingList: React.FC = () => {
                 onChange={(e) => setInputUnit(e.target.value)}
                 className="bg-transparent text-xs text-slate-500 border-none focus:outline-none pr-1"
               >
+                <option value="szt">szt</option>
                 <option value="ud">ud</option>
                 <option value="kg">kg</option>
                 <option value="l">l</option>
-                <option value="pack">pack</option>
+                <option value="op">op/pack</option>
               </select>
             </div>
 
@@ -160,10 +162,10 @@ export const ShoppingList: React.FC = () => {
             <button
               type="submit"
               disabled={!inputName.trim()}
-              className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition shadow-sm"
+              className="flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition shadow-sm cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Añadir</span>
+              <span className="hidden sm:inline">{t.addBtn}</span>
             </button>
           </div>
         </div>
@@ -178,7 +180,7 @@ export const ShoppingList: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar en tu lista..."
+            placeholder={t.searchPlaceholder}
             className="w-full pl-9 pr-4 py-1.5 rounded-xl border border-slate-200 bg-white text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
         </div>
@@ -187,25 +189,25 @@ export const ShoppingList: React.FC = () => {
         <div className="flex items-center gap-1.5 overflow-x-auto w-full pb-1 scrollbar-thin">
           <button
             onClick={() => setSelectedFilterCategory('all')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition ${
+            className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               selectedFilterCategory === 'all'
                 ? 'bg-slate-800 text-white'
                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
             }`}
           >
-            Todos ({shoppingItems.length})
+            {t.filterAll} ({shoppingItems.length})
           </button>
           {CATEGORY_LIST.filter(c => shoppingItems.some(i => i.categoryId === c.id)).map((cat) => (
             <button
               key={cat.id}
               onClick={() => setSelectedFilterCategory(cat.id)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition flex items-center gap-1 ${
+              className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition flex items-center gap-1 cursor-pointer ${
                 selectedFilterCategory === cat.id
                   ? 'bg-emerald-600 text-white'
                   : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
               }`}
             >
-              <span>{cat.name}</span>
+              <span>{getCategoryName(cat.id)}</span>
             </button>
           ))}
         </div>
@@ -214,15 +216,15 @@ export const ShoppingList: React.FC = () => {
       {/* Lista de Artículos Pendientes */}
       <div className="space-y-2">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
-          Por Comprar ({pendingItems.length})
+          {t.toBuyHeader} ({pendingItems.length})
         </h3>
 
         {pendingItems.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-slate-200 p-6">
             <span className="text-4xl">🎉</span>
-            <p className="font-semibold text-slate-700 mt-2">¡No tienes artículos pendientes!</p>
+            <p className="font-semibold text-slate-700 mt-2">{t.emptyShoppingTitle}</p>
             <p className="text-xs text-slate-400 mt-0.5">
-              Escribe arriba para añadir productos o escanea un ticket de compra.
+              {t.emptyShoppingSubtitle}
             </p>
           </div>
         ) : (
@@ -238,7 +240,7 @@ export const ShoppingList: React.FC = () => {
                     <button
                       onClick={() => toggleShoppingItem(item.id)}
                       className="w-6 h-6 rounded-lg border-2 border-slate-300 hover:border-emerald-500 hover:bg-emerald-50 flex items-center justify-center transition flex-shrink-0 cursor-pointer"
-                      title="Marcar como comprado"
+                      title={t.shoppingCompletedCount}
                     >
                       <Check className="w-4 h-4 text-transparent hover:text-emerald-500" />
                     </button>
@@ -251,7 +253,7 @@ export const ShoppingList: React.FC = () => {
                         <span
                           className={`text-[11px] font-medium px-2 py-0.5 rounded-md border ${cat.bgColor} ${cat.color} ${cat.borderColor}`}
                         >
-                          {cat.name}
+                          {getCategoryName(item.categoryId)}
                         </span>
                         {item.addedBy && (
                           <span className="text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded-full">
@@ -272,8 +274,8 @@ export const ShoppingList: React.FC = () => {
 
                     <button
                       onClick={() => removeShoppingItem(item.id)}
-                      className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 transition"
-                      title="Eliminar artículo"
+                      className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                      title={t.deleteItem}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -290,13 +292,13 @@ export const ShoppingList: React.FC = () => {
         <div className="space-y-2 pt-4 border-t border-slate-200">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <span>Ya en el Carrito ({completedItems.length})</span>
+              <span>{t.inCartHeader} ({completedItems.length})</span>
             </h3>
             <button
               onClick={clearCompletedShoppingItems}
-              className="text-xs font-semibold text-slate-400 hover:text-rose-600 transition"
+              className="text-xs font-semibold text-slate-400 hover:text-rose-600 transition cursor-pointer"
             >
-              Limpiar completados
+              {t.clearCompleted}
             </button>
           </div>
 
@@ -310,7 +312,6 @@ export const ShoppingList: React.FC = () => {
                   <button
                     onClick={() => toggleShoppingItem(item.id)}
                     className="w-6 h-6 rounded-lg bg-emerald-500 border border-emerald-600 flex items-center justify-center text-white flex-shrink-0 cursor-pointer shadow-sm"
-                    title="Desmarcar"
                   >
                     <Check className="w-4 h-4" />
                   </button>
@@ -326,7 +327,7 @@ export const ShoppingList: React.FC = () => {
                   </span>
                   <button
                     onClick={() => removeShoppingItem(item.id)}
-                    className="text-slate-300 hover:text-rose-500 p-1 rounded transition"
+                    className="text-slate-300 hover:text-rose-500 p-1 rounded transition cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

@@ -15,8 +15,11 @@ import { ReceiptReviewModal } from './ReceiptReviewModal';
 import { takeNativeReceiptPhoto, isNativePlatform } from '../services/nativePlugins';
 import { extractReceiptTextOnDevice } from '../services/ocr-service';
 import { parsePolishReceipt, mapPolishTicketToScannedResult } from '../services/ticket-parser';
+import { useApp } from '../context/AppContext';
 
 export const ReceiptScanner: React.FC = () => {
+  const { t } = useApp();
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [preprocessedUrl, setPreprocessedUrl] = useState<string | null>(null);
@@ -79,7 +82,7 @@ export const ReceiptScanner: React.FC = () => {
     setIsProcessing(true);
     setErrorMessage(null);
     setProgressPercent(5);
-    setProgressStatus('Preprocesando imagen en Canvas (<=1400px, binarización térmica)...');
+    setProgressStatus(t.ocrStep1);
 
     try {
       // 1. Ejecutar OCR 100% en el dispositivo (Web Worker Tesseract.js / ML Kit Nativo)
@@ -94,7 +97,7 @@ export const ReceiptScanner: React.FC = () => {
       setPreprocessTimeMs(ocrResult.preprocessTimeMs);
 
       // 2. Parsear líneas fiscales polacas (Paragon Fiskalny: Biedronka, Lidl, Żabka, Dino, etc.)
-      setProgressStatus('Analizando estructura fiscal polaca (Paragon Fiskalny) y hash SHA-256...');
+      setProgressStatus(t.ocrStep3);
       setProgressPercent(96);
 
       const parsedTicket = await parsePolishReceipt(ocrResult.lines);
@@ -128,20 +131,19 @@ export const ReceiptScanner: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-indigo-100 text-xs font-bold backdrop-blur-sm">
               <Cpu className="w-3.5 h-3.5 text-amber-300" />
-              <span>100% On-Device OCR (Zero-Cost)</span>
+              <span>{t.scannerHeaderBadgeOcr}</span>
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/25 text-emerald-100 text-xs font-bold backdrop-blur-sm border border-emerald-300/30">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-200" />
-              <span>Optimizado para Polonia (Paragon Fiskalny)</span>
+              <span>{t.scannerHeaderBadgePoland}</span>
             </span>
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-            Escáner Fiscal Polaco en tu Dispositivo
+            {t.scannerTitle}
           </h2>
           <p className="text-indigo-100 text-sm mt-2 leading-relaxed">
-            Toma una foto de tu ticket de <strong className="text-white">Biedronka, Lidl, Żabka, Dino, Auchan o Carrefour</strong>.
-            El preprocesamiento térmico en Canvas y el motor OCR se ejecutan 100% en tu teléfono sin costes de API externas, con deduplicación criptográfica <code className="bg-black/20 px-1.5 py-0.5 rounded text-xs">SHA-256</code>.
+            {t.scannerSubtitle}
           </p>
         </div>
       </div>
@@ -151,7 +153,7 @@ export const ReceiptScanner: React.FC = () => {
         <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3 text-rose-800 text-xs">
           <AlertTriangle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
           <div>
-            <strong className="font-bold block text-sm">Error al escanear el ticket</strong>
+            <strong className="font-bold block text-sm">{t.ocrErrorTitle}</strong>
             <span>{errorMessage}</span>
           </div>
         </div>
@@ -191,7 +193,7 @@ export const ReceiptScanner: React.FC = () => {
                     className="bg-indigo-600/90 hover:bg-indigo-700 text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-sm flex items-center gap-1 cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    <span>{showPreprocessed ? 'Ver Original' : 'Ver Binarizado'}</span>
+                    <span>{showPreprocessed ? t.seeOriginalBtn : t.seeBinarizedBtn}</span>
                   </button>
                 )}
                 <button
@@ -204,14 +206,14 @@ export const ReceiptScanner: React.FC = () => {
                   }}
                   className="bg-black/65 hover:bg-black text-white text-xs px-2.5 py-1 rounded-lg backdrop-blur-sm cursor-pointer"
                 >
-                  Cambiar foto
+                  {t.changePhotoBtn}
                 </button>
               </div>
             </div>
 
             {preprocessTimeMs !== null && (
               <p className="text-[11px] text-emerald-700 font-semibold">
-                ⚡ Imagen binarizada a escala de grises (máx. 1400px) en {preprocessTimeMs} ms
+                {t.binarizedSuccessHint} {preprocessTimeMs} ms
               </p>
             )}
 
@@ -223,7 +225,7 @@ export const ReceiptScanner: React.FC = () => {
                 className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-emerald-600 hover:from-indigo-700 hover:to-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg shadow-indigo-600/20 text-sm transition cursor-pointer"
               >
                 <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>Escanear Paragon Fiskalny (On-Device OCR)</span>
+                <span>{t.scanPolishReceiptBtn}</span>
               </button>
 
               {scannedResult && (
@@ -232,7 +234,7 @@ export const ReceiptScanner: React.FC = () => {
                   onClick={() => setShowReviewModal(true)}
                   className="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-4 py-3 rounded-xl text-sm transition cursor-pointer"
                 >
-                  <span>Reabrir Verificación ({scannedResult.items.length})</span>
+                  <span>{t.reopenVerificationBtn} ({scannedResult.items.length})</span>
                 </button>
               )}
             </div>
@@ -249,10 +251,10 @@ export const ReceiptScanner: React.FC = () => {
 
             <div>
               <h3 className="font-bold text-base text-slate-800">
-                Captura o selecciona la foto de tu ticket polaco (Paragon Fiskalny)
+                {t.scannerDropOrChoose}
               </h3>
               <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                Asegúrate de enfocar desde la cabecera (Biedronka, Lidl, Żabka, NIP) hasta la línea de cierre fiscal (SUMA PLN).
+                {t.scannerFormatHint}
               </p>
             </div>
 
@@ -263,7 +265,7 @@ export const ReceiptScanner: React.FC = () => {
                 className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm shadow-md shadow-indigo-600/20 transition cursor-pointer"
               >
                 <Camera className="w-4 h-4" />
-                <span>Tomar Foto con Cámara</span>
+                <span>{t.takePhotoCameraBtn}</span>
               </button>
 
               <button
@@ -272,7 +274,7 @@ export const ReceiptScanner: React.FC = () => {
                 className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-5 py-2.5 rounded-xl text-sm transition cursor-pointer border border-slate-200"
               >
                 <Upload className="w-4 h-4" />
-                <span>Elegir de la Galería</span>
+                <span>{t.chooseGalleryBtn}</span>
               </button>
             </div>
           </div>
@@ -284,7 +286,7 @@ export const ReceiptScanner: React.FC = () => {
             <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
             <div className="space-y-1">
               <h4 className="font-extrabold text-slate-900 text-lg">
-                Ejecutando OCR Local en tu Dispositivo...
+                {t.ocrProcessingTitle}
               </h4>
               <p className="text-xs text-slate-500">{progressStatus}</p>
             </div>
@@ -304,7 +306,7 @@ export const ReceiptScanner: React.FC = () => {
                     progressPercent >= 15 ? 'text-emerald-500' : 'text-slate-300'
                   }`}
                 />
-                <span>1. Escalado &lt;=1400px y binarización térmica en Canvas</span>
+                <span>{t.ocrStep1}</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle
@@ -312,7 +314,7 @@ export const ReceiptScanner: React.FC = () => {
                     progressPercent >= 40 ? 'text-emerald-500' : 'text-slate-300'
                   }`}
                 />
-                <span>2. Extracción OCR en Web Worker (pol/latino)</span>
+                <span>{t.ocrStep2}</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle
@@ -320,7 +322,7 @@ export const ReceiptScanner: React.FC = () => {
                     progressPercent >= 95 ? 'text-emerald-500' : 'text-slate-300'
                   }`}
                 />
-                <span>3. Parser fiscal polaco + Hash SHA-256 único</span>
+                <span>{t.ocrStep3}</span>
               </div>
             </div>
           </div>

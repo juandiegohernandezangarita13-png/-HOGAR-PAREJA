@@ -12,7 +12,6 @@ import {
   Sparkles,
   QrCode,
   Download,
-  ExternalLink,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -28,6 +27,7 @@ export const ShareHouseholdModal: React.FC = () => {
     connectedDevices,
     lastUpdatedBy,
     forceSyncNow,
+    t,
   } = useApp();
 
   const [tab, setTab] = useState<'couple' | 'install'>('couple');
@@ -72,7 +72,7 @@ export const ShareHouseholdModal: React.FC = () => {
 
   const handleGenerateRandomCode = () => {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const newCode = `PAREJA-${randomNum}`;
+    const newCode = `DOM-${randomNum}`;
     setCodeInput(newCode);
     setHouseholdCode(newCode);
   };
@@ -98,8 +98,10 @@ export const ShareHouseholdModal: React.FC = () => {
   };
 
   const handleShareWhatsApp = () => {
-    const text = `¡Amor! 🛒 He configurado nuestra app de lista de la compra y despensa compartida (ComprAI).\n\n1️⃣ Entra en este enlace desde tu móvil:\n${inviteUrl}\n\n2️⃣ En tu iPhone dale a Compartir ➔ "Añadir a pantalla de inicio" (o en Android "Instalar aplicación").\n\nNuestro código de hogar es: *${householdCode}* ❤️`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    const message = t.whatsappMessageTemplate
+      .replace('{URL}', inviteUrl)
+      .replace('{CODE}', householdCode);
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleNativeInstall = async () => {
@@ -125,10 +127,10 @@ export const ShareHouseholdModal: React.FC = () => {
               </div>
               <div>
                 <h3 className="font-extrabold text-lg leading-tight">
-                  Hogar Compartido & Móviles
+                  {t.shareModalTitle}
                 </h3>
                 <p className="text-emerald-100 text-xs">
-                  Sincronización en tiempo real para ti y tu novia (Android & iPhone)
+                  {t.shareModalSubtitle}
                 </p>
               </div>
             </div>
@@ -151,7 +153,7 @@ export const ShareHouseholdModal: React.FC = () => {
               }`}
             >
               <Users className="w-3.5 h-3.5" />
-              <span>1. Sincronizar Pareja</span>
+              <span>{t.tabCoupleSync}</span>
             </button>
             <button
               onClick={() => setTab('install')}
@@ -162,7 +164,7 @@ export const ShareHouseholdModal: React.FC = () => {
               }`}
             >
               <Smartphone className="w-3.5 h-3.5" />
-              <span>2. Instalar en iPhone / Android</span>
+              <span>{t.tabMobileInstall}</span>
             </button>
           </div>
         </div>
@@ -187,19 +189,19 @@ export const ShareHouseholdModal: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-800">
                         {syncStatus === 'synced'
-                          ? 'Conectado y sincronizado en vivo'
+                          ? t.statusSyncedLive
                           : syncStatus === 'connecting'
-                          ? 'Conectando con el hogar...'
-                          : 'Modo local (sin conexión al servidor)'}
+                          ? t.statusConnecting
+                          : t.statusLocalMode}
                       </span>
                       <span className="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
-                        {connectedDevices} {connectedDevices === 1 ? 'móvil' : 'móviles'} online
+                        {connectedDevices} {t.devicesOnline}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500">
                       {lastUpdatedBy
-                        ? `Último cambio realizado por: ${lastUpdatedBy}`
-                        : 'Cualquier cambio se refleja al instante en ambos teléfonos'}
+                        ? `${t.lastChangeBy} ${lastUpdatedBy}`
+                        : t.instantSyncNote}
                     </p>
                   </div>
                 </div>
@@ -207,7 +209,7 @@ export const ShareHouseholdModal: React.FC = () => {
                 <button
                   onClick={forceSyncNow}
                   className="p-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition cursor-pointer"
-                  title="Sincronizar ahora"
+                  title={t.syncNowTooltip}
                 >
                   <RefreshCw className="w-4 h-4" />
                 </button>
@@ -218,37 +220,37 @@ export const ShareHouseholdModal: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Tu nombre en este teléfono
+                      {t.yourNameLabel}
                     </label>
                     <input
                       type="text"
                       value={nameInput}
                       onChange={(e) => setNameInput(e.target.value)}
                       onBlur={() => setUserName(nameInput)}
-                      placeholder="Ej: Juan o nombre de tu novia"
+                      placeholder={t.yourNamePlaceholder}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Código de vuestro Hogar
+                      {t.householdCodeLabel}
                     </label>
                     <div className="flex gap-1.5">
                       <input
                         type="text"
                         value={codeInput}
                         onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-                        placeholder="Ej: CASA-JUAN-ANA"
+                        placeholder="DOM-PAR"
                         className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                       <button
                         type="button"
                         onClick={handleGenerateRandomCode}
                         className="px-2.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold whitespace-nowrap transition cursor-pointer"
-                        title="Generar código nuevo"
+                        title={t.newCodeBtn}
                       >
-                        🎲 Nuevo
+                        {t.newCodeBtn}
                       </button>
                     </div>
                   </div>
@@ -259,7 +261,7 @@ export const ShareHouseholdModal: React.FC = () => {
                     type="submit"
                     className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition cursor-pointer"
                   >
-                    Guardar y Conectar al Código "{codeInput}"
+                    {t.saveAndConnectBtn} "{codeInput}"
                   </button>
                 )}
               </form>
@@ -269,20 +271,20 @@ export const ShareHouseholdModal: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-emerald-600" />
-                    Invita a tu novia en 1 clic
+                    {t.inviteGirlfriendTitle}
                   </span>
                   <button
                     onClick={handleCopyCode}
                     className="text-xs font-mono font-bold bg-white px-2.5 py-1 rounded-lg border border-emerald-200 text-emerald-800 flex items-center gap-1 hover:bg-emerald-100 transition cursor-pointer"
                   >
-                    <span>Código: {householdCode}</span>
+                    <span>{householdCode}</span>
                     {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </div>
 
                 {isLocalhost && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-xs text-amber-800">
-                    💡 <strong>Nota:</strong> Ahora mismo estás abriendo la app desde <code>localhost</code> (solo visible en tu PC). Para que funcione en ambos teléfonos desde cualquier lugar con internet, usa el enlace público en la nube o ejecuta <code>npm run share</code>.
+                    💡 <strong>Notice:</strong> {t.localhostNotice}
                   </div>
                 )}
 
@@ -291,18 +293,18 @@ export const ShareHouseholdModal: React.FC = () => {
                   <div className="bg-white p-2 rounded-2xl border border-emerald-200 shadow-sm flex flex-col items-center flex-shrink-0">
                     <img
                       src={qrImageUrl}
-                      alt="Código QR del Hogar"
+                      alt="QR Code"
                       className="w-32 h-32 rounded-lg"
                     />
                     <span className="text-[10px] font-semibold text-slate-500 mt-1 flex items-center gap-1">
-                      <QrCode className="w-3 h-3" /> Escanear con cámara
+                      <QrCode className="w-3 h-3" /> {t.scanQrHint}
                     </span>
                   </div>
 
                   {/* Botones de compartir */}
                   <div className="flex-1 w-full space-y-2">
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Al abrir este enlace, el teléfono de tu novia se conectará automáticamente al código{' '}
+                      {t.shareDescription}{' '}
                       <strong className="text-emerald-800">{householdCode}</strong>:
                     </p>
 
@@ -312,7 +314,7 @@ export const ShareHouseholdModal: React.FC = () => {
                       className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-sm transition cursor-pointer"
                     >
                       <Share2 className="w-4 h-4" />
-                      <span>Enviar Enlace por WhatsApp a mi Novia</span>
+                      <span>{t.shareWhatsAppBtn}</span>
                     </button>
 
                     <button
@@ -323,12 +325,12 @@ export const ShareHouseholdModal: React.FC = () => {
                       {copiedLink ? (
                         <>
                           <Check className="w-4 h-4 text-emerald-600" />
-                          <span className="text-emerald-700 font-bold">¡Enlace copiado!</span>
+                          <span className="text-emerald-700 font-bold">{t.linkCopied}</span>
                         </>
                       ) : (
                         <>
                           <Copy className="w-4 h-4 text-slate-500" />
-                          <span>Copiar enlace directo</span>
+                          <span>{t.copyDirectLinkBtn}</span>
                         </>
                       )}
                     </button>
@@ -342,9 +344,9 @@ export const ShareHouseholdModal: React.FC = () => {
               {deferredPrompt && (
                 <div className="bg-emerald-600 text-white p-4 rounded-2xl flex items-center justify-between gap-3 shadow-md">
                   <div>
-                    <h4 className="font-bold text-sm">¡Instalación directa disponible!</h4>
+                    <h4 className="font-bold text-sm">{t.installDirectAvailable}</h4>
                     <p className="text-xs text-emerald-100">
-                      Instala ComprAI en la pantalla de inicio de tu teléfono con 1 toque.
+                      {t.installDirectSubtitle}
                     </p>
                   </div>
                   <button
@@ -352,7 +354,7 @@ export const ShareHouseholdModal: React.FC = () => {
                     className="bg-white text-emerald-800 font-extrabold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm cursor-pointer whitespace-nowrap"
                   >
                     <Download className="w-4 h-4" />
-                    Instalar Ahora
+                    {t.installNowBtn}
                   </button>
                 </div>
               )}
@@ -363,30 +365,23 @@ export const ShareHouseholdModal: React.FC = () => {
                   <span className="text-xl">🍎</span>
                   <div>
                     <h4 className="font-bold text-sm text-slate-900">
-                      Cómo instalarla en el iPhone (iOS)
+                      {t.installIosTitle}
                     </h4>
                     <p className="text-[11px] text-slate-500">
-                      Quedará con su icono en la pantalla de inicio a pantalla completa, igual que una app de la App Store
+                      {t.installIosSubtitle}
                     </p>
                   </div>
                 </div>
                 <ol className="text-xs text-slate-700 space-y-2 pl-5 list-decimal">
+                  <li>{t.installIosStep1}</li>
                   <li>
-                    Abre el enlace de la app desde <strong>Safari</strong> en el iPhone.
-                  </li>
-                  <li>
-                    Pulsa el botón <strong>Compartir</strong>{' '}
+                    {t.installIosStep2}{' '}
                     <span className="inline-block bg-white border border-slate-300 px-1.5 py-0.5 rounded text-[10px] font-mono">
                       ⬆️
-                    </span>{' '}
-                    en la barra inferior de Safari.
+                    </span>
                   </li>
-                  <li>
-                    Baja un poco y selecciona <strong>«Añadir a la pantalla de inicio»</strong> (Add to Home Screen).
-                  </li>
-                  <li>
-                    Pulsa <strong>Añadir</strong> arriba a la derecha. ¡Listo!
-                  </li>
+                  <li>{t.installIosStep3}</li>
+                  <li>{t.installIosStep4}</li>
                 </ol>
               </div>
 
@@ -396,23 +391,17 @@ export const ShareHouseholdModal: React.FC = () => {
                   <span className="text-xl">🤖</span>
                   <div>
                     <h4 className="font-bold text-sm text-slate-900">
-                      Cómo instalarla en Android
+                      {t.installAndroidTitle}
                     </h4>
                     <p className="text-[11px] text-slate-500">
-                      Se instala como WebAPK nativa sin ocupar apenas espacio
+                      {t.installAndroidSubtitle}
                     </p>
                   </div>
                 </div>
                 <ol className="text-xs text-slate-700 space-y-2 pl-5 list-decimal">
-                  <li>
-                    Abre el enlace de la app en <strong>Google Chrome</strong> en el móvil Android.
-                  </li>
-                  <li>
-                    Toca el menú de los tres puntos <strong>⋮</strong> (arriba a la derecha).
-                  </li>
-                  <li>
-                    Pulsa en <strong>«Instalar aplicación»</strong> o <strong>«Añadir a pantalla de inicio»</strong>.
-                  </li>
+                  <li>{t.installAndroidStep1}</li>
+                  <li>{t.installAndroidStep2}</li>
+                  <li>{t.installAndroidStep3}</li>
                 </ol>
               </div>
             </div>

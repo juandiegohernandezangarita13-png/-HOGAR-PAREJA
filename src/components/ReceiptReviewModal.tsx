@@ -32,6 +32,9 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
     toggleShoppingItem,
     checkReceiptDuplicate,
     householdCode,
+    t,
+    getCategoryName,
+    language,
   } = useApp();
 
   const [storeName, setStoreName] = useState(receiptData.storeName || 'Biedronka');
@@ -117,10 +120,10 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
     const newItem: ScannedReceiptItem = {
       id: `manual-${Date.now()}`,
       rawName: 'Manual',
-      normalizedName: 'Nuevo producto',
+      normalizedName: language === 'pl' ? 'Nowy produkt' : 'Nuevo producto',
       categoryId: 'otros',
       quantity: 1,
-      unit: 'szt',
+      unit: language === 'pl' ? 'szt' : 'ud',
       price: 0,
       suggestedLocation: 'pantry',
       estimatedShelfLifeDays: 14,
@@ -181,11 +184,10 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
               </span>
               <div>
                 <h3 className="font-extrabold text-base sm:text-xl">
-                  Verificación de Ticket Polaco (Paragon Fiskalny)
+                  {t.reviewModalTitle}
                 </h3>
                 <p className="text-indigo-100 text-xs mt-0.5">
-                  Revisa, edita o elimina líneas ruidosas antes de sincronizar con el hogar{' '}
-                  <strong>{householdCode}</strong>
+                  {t.reviewModalSubtitle}: <strong>{householdCode}</strong>
                 </p>
               </div>
             </div>
@@ -202,7 +204,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
             <div className="flex items-center gap-2">
               <Store className="w-4 h-4 text-amber-300 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="text-white/70 block text-[10px]">Tienda (Sklep):</span>
+                <span className="text-white/70 block text-[10px]">{t.storeLabel}</span>
                 <input
                   type="text"
                   value={storeName}
@@ -215,11 +217,11 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
             <div className="flex items-center gap-2">
               <Hash className="w-4 h-4 text-indigo-200 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="text-white/70 block text-[10px]">NIP Fiscal:</span>
+                <span className="text-white/70 block text-[10px]">{t.nipLabel}</span>
                 <input
                   type="text"
                   value={nip}
-                  placeholder="Sin NIP"
+                  placeholder="NIP"
                   onChange={(e) => setNip(e.target.value)}
                   className="bg-transparent font-mono font-bold text-white placeholder-white/40 focus:outline-none border-b border-white/30 w-full"
                 />
@@ -229,7 +231,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-emerald-300 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="text-white/70 block text-[10px]">Fecha Compra:</span>
+                <span className="text-white/70 block text-[10px]">{t.receiptDateLabel}</span>
                 <input
                   type="date"
                   value={receiptDate}
@@ -242,7 +244,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-200 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="text-white/70 block text-[10px]">Hora / Total PLN:</span>
+                <span className="text-white/70 block text-[10px]">{t.receiptTimeLabel}</span>
                 <div className="flex items-center gap-1.5">
                   <input
                     type="text"
@@ -265,11 +267,10 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
             <ShieldAlert className="w-5 h-5 text-rose-600 flex-shrink-0" />
             <div className="flex-1">
               <strong className="font-extrabold block text-rose-900">
-                ¡Ticket Duplicado Detectado! (Prevención de Doble Registro)
+                {t.duplicateAlertTitle}
               </strong>
               <span>
-                El hash único de este ticket (<code>{receiptHash.slice(0, 16)}...</code>) ya fue
-                registrado previamente en la despensa del hogar por ti o por tu pareja.
+                {t.duplicateAlertText} (<code>{receiptHash.slice(0, 16)}...</code>)
               </span>
             </div>
           </div>
@@ -279,7 +280,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
         <div className="px-4 sm:px-5 py-2.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600 flex-shrink-0">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="font-bold text-slate-800">
-              {selectedCount} de {items.length} productos activos
+              {selectedCount} / {items.length} {t.activeItemsCount}
             </span>
             <div className="flex gap-2">
               <button
@@ -287,7 +288,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
                 onClick={() => handleSelectAll(true)}
                 className="text-indigo-600 hover:underline font-semibold cursor-pointer"
               >
-                Marcar todos
+                {t.selectAllBtn}
               </button>
               <span>•</span>
               <button
@@ -295,7 +296,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
                 onClick={() => handleSelectAll(false)}
                 className="text-slate-500 hover:underline cursor-pointer"
               >
-                Desmarcar todos
+                {t.deselectAllBtn}
               </button>
             </div>
             <button
@@ -304,7 +305,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
               className="inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-lg border border-indigo-200 transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Añadir fila</span>
+              <span>{t.addRowBtn}</span>
             </button>
           </div>
 
@@ -316,7 +317,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
                 className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 font-medium cursor-pointer"
               >
                 <FileCode2 className="w-3.5 h-3.5" />
-                <span>{showRawText ? 'Ocultar OCR bruto' : 'Ver texto OCR'}</span>
+                <span>{showRawText ? t.hideOcrTextBtn : t.viewOcrTextBtn}</span>
               </button>
             )}
 
@@ -327,7 +328,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
                 onChange={(e) => setSyncWithShoppingList(e.target.checked)}
                 className="rounded text-emerald-600 focus:ring-emerald-500"
               />
-              <span>Tachar de la lista de compra</span>
+              <span>{t.syncWithShoppingListCheckbox}</span>
             </label>
           </div>
         </div>
@@ -344,10 +345,10 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
           {items.length === 0 ? (
             <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-300 p-6 space-y-3">
               <p className="font-bold text-slate-700 text-sm">
-                No se detectaron líneas con formato de precio fiscal polaco automáticamente.
+                {t.ocrEmptyHintTitle}
               </p>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
-                Asegúrate de que la foto del paragon fiskalny esté bien enfocada e incluya la columna derecha de precios, o añade los productos manualmente abajo.
+                {t.ocrEmptyHintText}
               </p>
               <button
                 type="button"
@@ -355,7 +356,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
                 className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-sm cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>Añadir Producto Manualmente</span>
+                <span>{t.addManualProductBtn}</span>
               </button>
             </div>
           ) : (
@@ -387,14 +388,14 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
                         onChange={(e) =>
                           handleUpdateItem(item.id, { normalizedName: e.target.value })
                         }
-                        placeholder="Nombre del producto"
+                        placeholder={t.productNameLabel}
                         className="font-bold text-slate-900 text-sm w-full bg-white px-2.5 py-1 rounded-lg border border-slate-200 focus:border-indigo-500 focus:outline-none"
                       />
                       <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-1 truncate">
                         <span>
                           OCR: <code className="bg-slate-100 px-1 rounded text-slate-600">{item.rawName}</code>
                         </span>
-                        <span>• Vence: {expDate}</span>
+                        <span>• {t.limitDate} {expDate}</span>
                       </div>
                     </div>
                   </div>
@@ -403,7 +404,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
                   <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end">
                     {/* Cantidad Editable */}
                     <div className="flex items-center bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs">
-                      <span className="text-[10px] text-slate-400 mr-1">Cant:</span>
+                      <span className="text-[10px] text-slate-400 mr-1">{t.qtyUnit}:</span>
                       <input
                         type="number"
                         step="any"
@@ -439,11 +440,11 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
                     <select
                       value={item.categoryId}
                       onChange={(e) => handleUpdateItem(item.id, { categoryId: e.target.value })}
-                      className="text-xs px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700 max-w-[130px]"
+                      className="text-xs px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700 max-w-[140px]"
                     >
                       {Object.values(CATEGORIES).map((c) => (
                         <option key={c.id} value={c.id}>
-                          {c.name}
+                          {getCategoryName(c.id)}
                         </option>
                       ))}
                     </select>
@@ -478,7 +479,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
                         }
                         className="w-10 text-center font-bold text-slate-800 focus:outline-none"
                       />
-                      <span className="text-slate-400 text-[10px]">d</span>
+                      <span className="text-slate-400 text-[10px]">{t.daysShort}</span>
                     </div>
 
                     {/* Botón Eliminar Elemento Leído Erróneamente */}
@@ -486,7 +487,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
                       type="button"
                       onClick={() => handleRemoveItem(item.id)}
                       className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer"
-                      title="Eliminar línea o ruido del papel"
+                      title={t.deleteItem}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -503,7 +504,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
             <AlertCircle className="w-4 h-4 text-indigo-500 flex-shrink-0" />
             <span>
               Hash SHA-256: <code className="font-mono text-slate-700">{receiptHash.slice(0, 14)}...</code>
-              {receiptData.processingTimeMs ? ` • Procesado en ${receiptData.processingTimeMs} ms` : ''}
+              {receiptData.processingTimeMs ? ` • ${t.processingTimeInfo} ${receiptData.processingTimeMs} ms` : ''}
             </span>
           </div>
 
@@ -513,7 +514,7 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
               onClick={onClose}
               className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-600 hover:bg-slate-200 transition cursor-pointer"
             >
-              Cancelar
+              {t.cancelBtn}
             </button>
 
             <button
@@ -525,8 +526,8 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
               <PackageCheck className="w-4 h-4" />
               <span>
                 {isDuplicate
-                  ? 'Ticket ya registrado en el hogar'
-                  : `Confirmar e integrar a la despensa del hogar (${selectedCount})`}
+                  ? t.duplicateBlockBtn
+                  : `${t.confirmToHouseholdPantryBtn} (${selectedCount})`}
               </span>
             </button>
           </div>

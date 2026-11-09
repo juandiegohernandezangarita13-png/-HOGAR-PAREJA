@@ -5,14 +5,12 @@ import {
   Clock, 
   Calendar, 
   CheckCircle2, 
-  RotateCcw, 
   Trash2, 
   Plus, 
   Search, 
   Snowflake, 
   Refrigerator, 
   ShoppingBag,
-  ExternalLink
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { CATEGORIES, getExpirationStatus, calculateExpirationDate } from '../data/shelfLifeRules';
@@ -25,7 +23,10 @@ export const PantryView: React.FC = () => {
     removePantryItem, 
     readdPantryItemToShopping,
     addPantryItem,
-    stats 
+    stats,
+    t,
+    getCategoryName,
+    language,
   } = useApp();
 
   const [locationFilter, setLocationFilter] = useState<'all' | StorageLocation>('all');
@@ -39,7 +40,7 @@ export const PantryView: React.FC = () => {
   const [newLocation, setNewLocation] = useState<StorageLocation>('fridge');
   const [newDays, setNewDays] = useState(5);
   const [newQuantity, setNewQuantity] = useState(1);
-  const [newUnit, setNewUnit] = useState('ud');
+  const [newUnit, setNewUnit] = useState(language === 'pl' ? 'szt' : 'ud');
 
   // Filtrar activos (no consumidos)
   const activeItems = pantryItems.filter((i) => !i.consumed);
@@ -81,20 +82,45 @@ export const PantryView: React.FC = () => {
     setShowAddModal(false);
   };
 
+  const getLocalizedExpLabel = (expDate: string) => {
+    const { status, daysRemaining } = getExpirationStatus(expDate);
+    if (status === 'expired') {
+      return {
+        status,
+        label: t.expiredDaysAgo.replace('{DAYS}', String(Math.abs(daysRemaining))),
+      };
+    } else if (daysRemaining === 0) {
+      return {
+        status,
+        label: t.expiresToday,
+      };
+    } else if (daysRemaining <= 3) {
+      return {
+        status,
+        label: t.expiresInDays.replace('{DAYS}', String(daysRemaining)),
+      };
+    } else {
+      return {
+        status,
+        label: t.goodForDays.replace('{DAYS}', String(daysRemaining)),
+      };
+    }
+  };
+
   const getLocationBadge = (loc: StorageLocation) => {
     switch (loc) {
       case 'fridge':
         return (
           <span className="flex items-center gap-1 text-[11px] font-semibold bg-sky-50 text-sky-700 px-2 py-0.5 rounded-md border border-sky-200">
             <Refrigerator className="w-3 h-3 text-sky-500" />
-            Nevera
+            {t.locationFridge}
           </span>
         );
       case 'freezer':
         return (
           <span className="flex items-center gap-1 text-[11px] font-semibold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md border border-indigo-200">
             <Snowflake className="w-3 h-3 text-indigo-500" />
-            Congelador
+            {t.locationFreezer}
           </span>
         );
       case 'pantry':
@@ -102,7 +128,7 @@ export const PantryView: React.FC = () => {
         return (
           <span className="flex items-center gap-1 text-[11px] font-semibold bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md border border-amber-200">
             <Package className="w-3 h-3 text-amber-500" />
-            Despensa
+            {t.locationPantry}
           </span>
         );
     }
@@ -117,18 +143,16 @@ export const PantryView: React.FC = () => {
             <AlertTriangle className="w-6 h-6 text-white" />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-base sm:text-lg">Atención a tus Caducidades</h3>
+            <h3 className="font-bold text-base sm:text-lg">{t.pantryUrgentBannerTitle}</h3>
             <p className="text-white/90 text-sm mt-0.5">
-              Tienes {stats.pantryExpired > 0 && <span className="font-extrabold underline">{stats.pantryExpired} producto(s) ya caducado(s)</span>}
-              {stats.pantryExpired > 0 && stats.pantryExpiringSoon > 0 && ' y '}
-              {stats.pantryExpiringSoon > 0 && <span className="font-extrabold underline">{stats.pantryExpiringSoon} por vencer en menos de 3 días</span>}.
+              {t.pantryUrgentBannerText}
             </p>
           </div>
           <button
             onClick={() => setStatusFilter(stats.pantryExpired > 0 ? 'expired' : 'warning')}
             className="hidden sm:inline-flex bg-white text-rose-700 font-bold px-3 py-1.5 rounded-xl text-xs hover:bg-rose-50 transition cursor-pointer"
           >
-            Ver Urgentes
+            {t.viewUrgentBtn}
           </button>
         </div>
       )}
@@ -137,13 +161,13 @@ export const PantryView: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <span>📦 Mi Despensa & Nevera</span>
+            <span>{t.pantryTitle}</span>
             <span className="text-xs bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded-full">
-              {activeItems.length} artículos
+              {activeItems.length}
             </span>
           </h2>
           <p className="text-xs text-slate-500">
-            Control de conservación, fechas de consumo y avisos de caducidad
+            {t.pantrySubtitle}
           </p>
         </div>
 
@@ -152,7 +176,7 @@ export const PantryView: React.FC = () => {
           className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-sm shadow-sm transition cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Añadir a Despensa</span>
+          <span>{t.addToPantryBtn}</span>
         </button>
       </div>
 
@@ -161,50 +185,50 @@ export const PantryView: React.FC = () => {
         {/* Filtros Ubicación */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
-            Ubicación:
+            {t.locationLabel}
           </span>
           <button
             onClick={() => setLocationFilter('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               locationFilter === 'all'
                 ? 'bg-slate-900 text-white'
                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
             }`}
           >
-            Todas ({activeItems.length})
+            {t.locationAll} ({activeItems.length})
           </button>
           <button
             onClick={() => setLocationFilter('fridge')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               locationFilter === 'fridge'
                 ? 'bg-sky-600 text-white'
                 : 'bg-sky-50 text-sky-700 hover:bg-sky-100'
             }`}
           >
             <Refrigerator className="w-3.5 h-3.5" />
-            Nevera ({activeItems.filter((i) => i.location === 'fridge').length})
+            {t.locationFridge} ({activeItems.filter((i) => i.location === 'fridge').length})
           </button>
           <button
             onClick={() => setLocationFilter('freezer')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               locationFilter === 'freezer'
                 ? 'bg-indigo-600 text-white'
                 : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
             }`}
           >
             <Snowflake className="w-3.5 h-3.5" />
-            Congelador ({activeItems.filter((i) => i.location === 'freezer').length})
+            {t.locationFreezer} ({activeItems.filter((i) => i.location === 'freezer').length})
           </button>
           <button
             onClick={() => setLocationFilter('pantry')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition cursor-pointer ${
               locationFilter === 'pantry'
                 ? 'bg-amber-600 text-white'
                 : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
             }`}
           >
             <Package className="w-3.5 h-3.5" />
-            Despensa ({activeItems.filter((i) => i.location === 'pantry').length})
+            {t.locationPantry} ({activeItems.filter((i) => i.location === 'pantry').length})
           </button>
         </div>
 
@@ -212,47 +236,47 @@ export const PantryView: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center pt-2 border-t border-slate-100">
           <div className="flex items-center gap-1.5 overflow-x-auto">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-1">
-              Estado:
+              {t.statusLabel}
             </span>
             <button
               onClick={() => setStatusFilter('all')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer ${
                 statusFilter === 'all'
                   ? 'bg-slate-200 text-slate-800'
                   : 'text-slate-500 hover:bg-slate-100'
               }`}
             >
-              Todos
+              {t.statusAll}
             </button>
             <button
               onClick={() => setStatusFilter('expired')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer ${
                 statusFilter === 'expired'
                   ? 'bg-rose-600 text-white'
                   : 'text-rose-600 bg-rose-50 hover:bg-rose-100'
               }`}
             >
-              🔴 Caducados ({stats.pantryExpired})
+              {t.statusExpired} ({stats.pantryExpired})
             </button>
             <button
               onClick={() => setStatusFilter('warning')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer ${
                 statusFilter === 'warning'
                   ? 'bg-amber-500 text-white'
                   : 'text-amber-700 bg-amber-50 hover:bg-amber-100'
               }`}
             >
-              🟡 Por vencer ({stats.pantryExpiringSoon})
+              {t.statusWarning} ({stats.pantryExpiringSoon})
             </button>
             <button
               onClick={() => setStatusFilter('good')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer ${
                 statusFilter === 'good'
                   ? 'bg-emerald-600 text-white'
                   : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
               }`}
             >
-              🟢 Buenos
+              {t.statusGood}
             </button>
           </div>
 
@@ -262,7 +286,7 @@ export const PantryView: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar en despensa..."
+              placeholder={t.searchPantryPlaceholder}
               className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
@@ -273,16 +297,16 @@ export const PantryView: React.FC = () => {
       {sortedItems.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200 p-8">
           <span className="text-4xl">🧺</span>
-          <p className="font-semibold text-slate-700 mt-2">No hay artículos con estos filtros</p>
+          <p className="font-semibold text-slate-700 mt-2">{t.emptyPantryTitle}</p>
           <p className="text-xs text-slate-400 mt-0.5">
-            Añade productos manualmente o escanea un ticket de compra.
+            {t.emptyPantrySubtitle}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {sortedItems.map((item) => {
             const cat = CATEGORIES[item.categoryId] || CATEGORIES.otros;
-            const exp = getExpirationStatus(item.expirationDate);
+            const exp = getLocalizedExpLabel(item.expirationDate);
 
             // Estilos de semáforo
             let cardBorder = 'border-slate-200 hover:border-slate-300';
@@ -308,7 +332,7 @@ export const PantryView: React.FC = () => {
                       <span
                         className={`text-[11px] font-semibold px-2 py-0.5 rounded-md border ${cat.bgColor} ${cat.color} ${cat.borderColor}`}
                       >
-                        {cat.name}
+                        {getCategoryName(item.categoryId)}
                       </span>
                       {getLocationBadge(item.location)}
                     </div>
@@ -335,16 +359,16 @@ export const PantryView: React.FC = () => {
                   <div className="flex items-center gap-4 text-xs text-slate-500 mt-2">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Comprado: {item.purchaseDate}</span>
+                      <span>{t.boughtOn} {item.purchaseDate}</span>
                     </div>
                     <div>
-                      <span className="font-medium text-slate-700">Límite: {item.expirationDate}</span>
+                      <span className="font-medium text-slate-700">{t.limitDate} {item.expirationDate}</span>
                     </div>
                   </div>
 
                   {item.sourceReceiptStore && (
                     <p className="text-[11px] text-indigo-600 font-medium mt-1">
-                      🛒 Ticket: {item.sourceReceiptStore}
+                      🛒 {item.sourceReceiptStore}
                     </p>
                   )}
                 </div>
@@ -355,26 +379,26 @@ export const PantryView: React.FC = () => {
                     <button
                       onClick={() => markPantryItemConsumed(item.id)}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-semibold hover:bg-emerald-100 transition cursor-pointer"
-                      title="Marcar como consumido"
+                      title={t.actionConsumed}
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Consumido</span>
+                      <span>{t.actionConsumed}</span>
                     </button>
 
                     <button
                       onClick={() => readdPantryItemToShopping(item)}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 font-semibold hover:bg-indigo-100 transition cursor-pointer"
-                      title="Volver a añadir a la lista de compra"
+                      title={t.actionRestock}
                     >
                       <ShoppingBag className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>Reponer</span>
+                      <span>{t.actionRestock}</span>
                     </button>
                   </div>
 
                   <button
                     onClick={() => removePantryItem(item.id)}
-                    className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 transition"
-                    title="Eliminar de la despensa"
+                    className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                    title={t.deleteItem}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -390,10 +414,10 @@ export const PantryView: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-lg text-slate-900">Añadir a la Despensa</h3>
+              <h3 className="font-bold text-lg text-slate-900">{t.manualModalTitle}</h3>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold p-1 rounded-lg"
+                className="text-slate-400 hover:text-slate-600 font-bold p-1 rounded-lg cursor-pointer"
               >
                 ✕
               </button>
@@ -402,21 +426,21 @@ export const PantryView: React.FC = () => {
             <form onSubmit={handleManualAdd} className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-1">
-                  Nombre del Producto
+                  {t.productNameLabel}
                 </label>
                 <input
                   type="text"
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="ej: Merluza fresca, Tomates..."
+                  placeholder={language === 'pl' ? 'np. Łosoś świeży, Pomidory...' : 'ej: Merluza fresca, Tomates...'}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Categoría</label>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">{t.categoryLabel}</label>
                   <select
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
@@ -424,22 +448,22 @@ export const PantryView: React.FC = () => {
                   >
                     {Object.values(CATEGORIES).map((c) => (
                       <option key={c.id} value={c.id}>
-                        {c.name}
+                        {getCategoryName(c.id)}
                       </option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Ubicación</label>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">{t.locationLabel}</label>
                   <select
                     value={newLocation}
                     onChange={(e) => setNewLocation(e.target.value as StorageLocation)}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white"
                   >
-                    <option value="fridge">❄️ Nevera</option>
-                    <option value="freezer">🧊 Congelador</option>
-                    <option value="pantry">🧺 Despensa</option>
+                    <option value="fridge">❄️ {t.locationFridge}</option>
+                    <option value="freezer">🧊 {t.locationFreezer}</option>
+                    <option value="pantry">🧺 {t.locationPantry}</option>
                   </select>
                 </div>
               </div>
@@ -447,7 +471,7 @@ export const PantryView: React.FC = () => {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1">
-                    Cantidad y Unidad
+                    {t.qtyUnit}
                   </label>
                   <div className="flex gap-1">
                     <input
@@ -462,17 +486,18 @@ export const PantryView: React.FC = () => {
                       onChange={(e) => setNewUnit(e.target.value)}
                       className="flex-1 px-2 py-2 rounded-xl border border-slate-300 text-sm bg-white"
                     >
+                      <option value="szt">szt</option>
                       <option value="ud">ud</option>
                       <option value="kg">kg</option>
                       <option value="l">l</option>
-                      <option value="pack">pack</option>
+                      <option value="op">op/pack</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1">
-                    Caducidad (Días de vida)
+                    {t.shelfLifeDaysLabel}
                   </label>
                   <input
                     type="number"
@@ -489,15 +514,15 @@ export const PantryView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
                 >
-                  Cancelar
+                  {t.cancelBtn}
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                  className="px-5 py-2 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm cursor-pointer"
                 >
-                  Guardar en Despensa
+                  {t.saveToPantryBtn}
                 </button>
               </div>
             </form>

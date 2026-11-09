@@ -1,6 +1,7 @@
 import React from 'react';
-import { ShoppingCart, Package, ScanLine, AlertTriangle, Heart, Users } from 'lucide-react';
+import { ShoppingCart, Package, ScanLine, AlertTriangle, Heart, Users, Globe, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { Language } from '../i18n/translations';
 
 export const Header: React.FC = () => {
   const {
@@ -11,6 +12,10 @@ export const Header: React.FC = () => {
     connectedDevices,
     householdCode,
     setShowShareModal,
+    setShowPrivacyModal,
+    language,
+    setLanguage,
+    t,
   } = useApp();
 
   return (
@@ -23,14 +28,14 @@ export const Header: React.FC = () => {
               🛒
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <h1 className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900">
                   Compr<span className="text-emerald-600">AI</span>
                 </h1>
                 <button
                   onClick={() => setShowShareModal(true)}
                   className="flex items-center gap-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full transition cursor-pointer"
-                  title="Configurar hogar compartido con tu novia e instalar en el móvil"
+                  title={t.shareModalTitle}
                 >
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
@@ -50,22 +55,53 @@ export const Header: React.FC = () => {
                   )}
                 </button>
               </div>
-              <p className="text-xs text-slate-500 hidden sm:block">
-                Lista de la compra & despensa sincronizada en pareja
+              <p className="text-xs text-slate-500 hidden sm:block truncate">
+                {t.appSubtitle}
               </p>
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <nav className="flex items-center gap-1 sm:gap-2">
-            {/* Botón Compartir con Novia / Instalar en Móvil */}
+          {/* Controls & Navigation Tabs */}
+          <nav className="flex items-center gap-1.5 sm:gap-2">
+            {/* Selector manual de idioma (PL / ES / EN) */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600">
+              <button
+                onClick={() => setLanguage('pl')}
+                className={`px-1.5 py-1 rounded-lg transition cursor-pointer ${
+                  language === 'pl' ? 'bg-white text-emerald-700 shadow-xs' : 'hover:text-slate-900'
+                }`}
+                title="Język polski"
+              >
+                🇵🇱 PL
+              </button>
+              <button
+                onClick={() => setLanguage('es')}
+                className={`px-1.5 py-1 rounded-lg transition cursor-pointer ${
+                  language === 'es' ? 'bg-white text-emerald-700 shadow-xs' : 'hover:text-slate-900'
+                }`}
+                title="Español"
+              >
+                🇪🇸 ES
+              </button>
+              <button
+                onClick={() => setLanguage('en')}
+                className={`px-1.5 py-1 rounded-lg transition cursor-pointer ${
+                  language === 'en' ? 'bg-white text-emerald-700 shadow-xs' : 'hover:text-slate-900'
+                }`}
+                title="English"
+              >
+                🇬🇧 EN
+              </button>
+            </div>
+
+            {/* Botón Pareja / Móvil */}
             <button
               onClick={() => setShowShareModal(true)}
               className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-xs sm:text-sm font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition cursor-pointer"
-              title="Compartir con mi novia e instalar en teléfonos"
+              title={t.shareModalTitle}
             >
               <Users className="w-4 h-4 text-rose-600" />
-              <span className="hidden md:inline">Pareja / Móvil</span>
+              <span className="hidden md:inline">{t.coupleMobile}</span>
             </button>
 
             {/* Tab Lista de Compra */}
@@ -78,7 +114,7 @@ export const Header: React.FC = () => {
               }`}
             >
               <ShoppingCart className="w-4 h-4" />
-              <span className="hidden sm:inline">Lista</span>
+              <span className="hidden sm:inline">{t.tabShopping}</span>
               {stats.shoppingPending > 0 && (
                 <span
                   className={`text-xs px-1.5 py-0.2 rounded-full font-bold ${
@@ -102,7 +138,7 @@ export const Header: React.FC = () => {
               }`}
             >
               <Package className="w-4 h-4" />
-              <span className="hidden sm:inline">Despensa</span>
+              <span className="hidden sm:inline">{t.tabPantry}</span>
               {stats.pantryExpired > 0 || stats.pantryExpiringSoon > 0 ? (
                 <span className="flex items-center gap-0.5 text-xs px-1.5 py-0.2 rounded-full font-bold bg-amber-500 text-white animate-pulse">
                   <AlertTriangle className="w-3 h-3" />
@@ -131,7 +167,7 @@ export const Header: React.FC = () => {
               }`}
             >
               <ScanLine className="w-4 h-4 animate-bounce" />
-              <span className="font-bold">Escanear Ticket</span>
+              <span className="font-bold">{t.tabScanner}</span>
             </button>
           </nav>
         </div>

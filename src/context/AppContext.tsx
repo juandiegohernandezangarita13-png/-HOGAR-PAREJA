@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { ShoppingItem, PantryItem, ScannedReceiptItem } from '../types';
 import { calculateExpirationDate, detectCategoryAndShelfLife } from '../data/shelfLifeRules';
+import {
+  Language,
+  detectDeviceLanguage,
+  TRANSLATIONS,
+  TranslationDictionary,
+  CATEGORY_TRANSLATIONS,
+} from '../i18n/translations';
 import confetti from 'canvas-confetti';
 
 export type SyncStatus = 'local' | 'connecting' | 'synced' | 'error';
@@ -8,6 +15,16 @@ export type SyncStatus = 'local' | 'connecting' | 'synced' | 'error';
 interface AppContextType {
   activeTab: 'shopping' | 'pantry' | 'scanner';
   setActiveTab: (tab: 'shopping' | 'pantry' | 'scanner') => void;
+
+  // Idioma del dispositivo y traducciones
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: TranslationDictionary;
+  getCategoryName: (categoryId: string) => string;
+
+  // Política de Privacidad (RODO / RGPD)
+  showPrivacyModal: boolean;
+  setShowPrivacyModal: (show: boolean) => void;
 
   // Sincronización en Pareja / Hogar Compartido
   householdCode: string;
@@ -76,7 +93,7 @@ const INITIAL_SHOPPING_ITEMS: ShoppingItem[] = [
     quantity: 1,
     unit: 'op',
     isCompleted: false,
-    notes: 'Para la cena',
+    notes: 'Na kolację',
     addedAt: new Date().toISOString(),
   },
 ];
@@ -89,6 +106,29 @@ const normalizeHouseholdCode = (raw: string) =>
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<'shopping' | 'pantry' | 'scanner'>('shopping');
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+
+  // Detección automática del idioma del dispositivo (pl / es / en)
+  const [language, setLanguageState] = useState<Language>(() => detectDeviceLanguage());
+
+  const setLanguage = (newLang: Language) => {
+    setLanguageState(newLang);
+    try {
+      localStorage.setItem('comprai_language', newLang);
+    } catch {
+      // ignore
+    }
+  };
+
+  const t = TRANSLATIONS[language] || TRANSLATIONS.pl;
+
+  const getCategoryName = useCallback(
+    (categoryId: string) => {
+      const catDict = CATEGORY_TRANSLATIONS[language] || CATEGORY_TRANSLATIONS.pl;
+      return catDict[categoryId] || categoryId;
+    },
+    [language]
+  );
 
   const clientIdRef = useRef<string>(
     'client-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8)
@@ -203,7 +243,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             shoppingItems: nextShopping,
             pantryItems: nextPantry,
             registeredReceiptHashes: nextHashes,
-            lastUpdatedBy: userName || 'Tu pareja',
+            lastUpdatedBy: userName || 'Partner',
             clientId: clientIdRef.current,
           }),
         });
@@ -232,12 +272,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!hash) return false;
       const cleanHash = hash.trim().toLowerCase();
 
-      // 1. Verificar en estado local sincronizado
       if (hashesRef.current.some((h) => h.toLowerCase() === cleanHash)) {
         return true;
       }
 
-      // 2. Verificar contra el backend remoto del hogar compartido
       if (householdCode) {
         try {
           const res = await fetch(
@@ -252,7 +290,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
           }
         } catch {
-          // Si está offline, basta con la verificación local
+          // offline
         }
       }
 
@@ -542,7 +580,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       categoryId: pantryItem.categoryId,
       quantity: pantryItem.quantity,
       unit: pantryItem.unit,
-      notes: `Reponer (Consumido de despensa)`,
+      notes: `${t.restockNote}`,
     });
     setActiveTab('shopping');
   };
@@ -579,6 +617,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         activeTab,
         setActiveTab,
+        language,
+        setLanguage,
+        t,
+        getCategoryName,
+        showPrivacyModal,
+        setShowPrivacyModal,
         householdCode,
         setHouseholdCode,
         userName,
