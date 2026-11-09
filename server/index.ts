@@ -1,11 +1,9 @@
 import express from 'express';
 import cors from 'cors';
-import multer from 'multer';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 dotenv.config();
 
@@ -19,12 +17,13 @@ app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
 // ==========================================
-// PERSISTENCIA Y SINCRONIZACIÓN DE HOGARES (PAREJA)
+// PERSISTENCIA Y SINCRONIZACIÓN DE HOGARES (PAREJA) + DEDUPLICACIÓN DE TICKETS
 // ==========================================
 interface HouseholdData {
   code: string;
   shoppingItems: any[];
   pantryItems: any[];
+  registeredReceiptHashes: string[];
   updatedAt: number;
   lastUpdatedBy?: string;
 }
@@ -43,7 +42,14 @@ try {
   if (fs.existsSync(DATA_FILE)) {
     const raw = fs.readFileSync(DATA_FILE, 'utf-8');
     const parsed = JSON.parse(raw) as Record<string, HouseholdData>;
-    Object.entries(parsed).forEach(([k, v]) => households.set(k, v));
+    Object.entries(parsed).forEach(([k, v]) => {
+      households.set(k, {
+        ...v,
+        registeredReceiptHashes: Array.isArray(v.registeredReceiptHashes)
+          ? v.registeredReceiptHashes
+          : [],
+      });
+    });
     console.log(`🏠 ${households.size} hogar(es) compartido(s) cargados de disco.`);
   }
 } catch (err) {
@@ -129,6 +135,7 @@ app.get('/api/household/:code', (req, res) => {
     return res.json({
       exists: false,
       code,
+      registeredReceiptHashes: [],
       connectedDevices: clients ? clients.size : 0,
     });
   }
@@ -136,7 +143,25 @@ app.get('/api/household/:code', (req, res) => {
   return res.json({
     exists: true,
     ...existing,
+    registeredReceiptHashes: existing.registeredReceiptHashes || [],
     connectedDevices: clients ? clients.size : 0,
+  });
+});
+
+// Verificar si un hash SHA-256 de ticket ya fue registrado en el hogar compartido
+app.get('/api/household/:code/receipt-hash/:hash', (req, res) => {
+  const code = normalizeCode(req.params.code);
+  const hash = String(req.params.hash || '').trim().toLowerCase();
+  const existing = households.get(code);
+  const isDuplicate = Boolean(
+    existing &&
+      Array.isArray(existing.registeredReceiptHashes) &&
+      existing.registeredReceiptHashes.includes(hash)
+  );
+  return res.json({
+    code,
+    hash,
+    isDuplicate,
   });
 });
 
@@ -147,15 +172,31 @@ app.put('/api/household/:code', (req, res) => {
     return res.status(400).json({ error: 'Código de hogar inválido' });
   }
 
-  const { shoppingItems, pantryItems, lastUpdatedBy, clientId } = req.body;
+  const {
+    shoppingItems,
+    pantryItems,
+    registeredReceiptHashes,
+    lastUpdatedBy,
+    clientId,
+  } = req.body;
+
   if (!Array.isArray(shoppingItems) || !Array.isArray(pantryItems)) {
     return res.status(400).json({ error: 'Datos de lista o despensa inválidos' });
   }
+
+  const prev = households.get(code);
+  const mergedHashes = Array.from(
+    new Set([
+      ...(prev?.registeredReceiptHashes || []),
+      ...(Array.isArray(registeredReceiptHashes) ? registeredReceiptHashes : []),
+    ])
+  );
 
   const updatedData: HouseholdData = {
     code,
     shoppingItems,
     pantryItems,
+    registeredReceiptHashes: mergedHashes,
     updatedAt: Date.now(),
     lastUpdatedBy: lastUpdatedBy || 'Alguien',
   };
@@ -177,6 +218,7 @@ app.put('/api/household/:code', (req, res) => {
   return res.json({
     ok: true,
     updatedAt: updatedData.updatedAt,
+    registeredReceiptHashes: mergedHashes,
     connectedDevices: clients ? clients.size : 0,
   });
 });
@@ -213,7 +255,7 @@ app.get('/api/household/:code/stream', (req, res) => {
   // Notificar presencia a ambos teléfonos
   broadcastPresence(code);
 
-  // Heartbeat cada 25s para mantener viva la conexión en 4G/5G/Wi-Fi móvil
+  // Heartbeat cada 25s para mantener viva la conexión
   const heartbeat = setInterval(() => {
     try {
       res.write(`: ping\n\n`);
@@ -229,167 +271,13 @@ app.get('/api/household/:code/stream', (req, res) => {
   });
 });
 
-// ==========================================
-// ESCÁNER DE TICKETS CON IA (GEMINI VISION)
-// ==========================================
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-});
-
-const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-let genAI: GoogleGenerativeAI | null = null;
-
-if (apiKey) {
-  genAI = new GoogleGenerativeAI(apiKey);
-  console.log('✅ Google Gemini API Key detectada para análisis multimodal.');
-} else {
-  console.log('ℹ️ No se detectó GEMINI_API_KEY. Se utilizará el analizador inteligente con heurísticas.');
-}
-
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    hasApiKey: !!apiKey,
+    ocrMode: 'on-device-zero-cost',
     activeHouseholds: households.size,
     timestamp: new Date().toISOString(),
   });
-});
-
-app.post('/api/scan-receipt', upload.single('receipt'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No se subió ningún archivo de imagen.' });
-    }
-
-    if (genAI && apiKey) {
-      try {
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-        const prompt = `
-Eres un asistente experto en digitalización de recibos y tickets de supermercado en español (Mercadona, Carrefour, Lidl, Día, etc.).
-Analiza la imagen de este recibo de compra y devuelve EXCLUSIVAMENTE un objeto JSON válido con este formato:
-{
-  "storeName": "Nombre del supermercado",
-  "receiptDate": "YYYY-MM-DD",
-  "totalAmount": 0.00,
-  "items": [
-    {
-      "id": "1",
-      "rawName": "Texto exacto abreviado en el ticket",
-      "normalizedName": "Nombre limpio y entendible en español (ej: Leche entera 1L)",
-      "categoryId": "frutas_verduras" | "carnes_aves" | "pescados_mariscos" | "lacteos_huevos" | "embutidos_quesos" | "panaderia_pasteleria" | "despensa_conservas" | "congelados" | "bebidas" | "limpieza_hogar" | "otros",
-      "quantity": 1,
-      "unit": "ud" | "kg" | "l" | "pack",
-      "price": 0.00,
-      "suggestedLocation": "fridge" | "freezer" | "pantry",
-      "estimatedShelfLifeDays": 3,
-      "selected": true
-    }
-  ]
-}
-
-Reglas importantes:
-- Si no puedes ver la fecha en el ticket, usa la fecha de hoy: "${new Date().toISOString().split('T')[0]}".
-- Normaliza las abreviaturas comerciales (ej: "LECH ENT" -> "Leche entera", "PECH POLL" -> "Pechuga de pollo").
-- Estima los días de caducidad según el producto fresco (carnes y pescados 2-3 días, frutas delicadas 3-5 días, lácteos 7-14 días, conservas 365+ días).
-- Devuelve únicamente el JSON sin bloques markdown ni comentarios adicionales.
-`;
-
-        const imagePart = {
-          inlineData: {
-            data: req.file.buffer.toString('base64'),
-            mimeType: req.file.mimetype,
-          },
-        };
-
-        const result = await model.generateContent([prompt, imagePart]);
-        const responseText = result.response.text();
-
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          return res.json(parsed);
-        }
-      } catch (aiError) {
-        console.error('Error llamando a Gemini API:', aiError);
-      }
-    }
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const fallbackResponse = {
-      storeName: 'Supermercado Local',
-      receiptDate: todayStr,
-      totalAmount: 18.90,
-      items: [
-        {
-          id: 'fb-1',
-          rawName: 'PECH POLLO 500G',
-          normalizedName: 'Pechuga de pollo fileteada',
-          categoryId: 'carnes_aves',
-          quantity: 1,
-          unit: 'bandeja',
-          price: 4.50,
-          suggestedLocation: 'fridge',
-          estimatedShelfLifeDays: 2,
-          selected: true,
-        },
-        {
-          id: 'fb-2',
-          rawName: 'LECH ENTERA 1L',
-          normalizedName: 'Leche entera',
-          categoryId: 'lacteos_huevos',
-          quantity: 2,
-          unit: 'l',
-          price: 1.90,
-          suggestedLocation: 'fridge',
-          estimatedShelfLifeDays: 14,
-          selected: true,
-        },
-        {
-          id: 'fb-3',
-          rawName: 'PLATANO CANARIAS',
-          normalizedName: 'Plátano de Canarias',
-          categoryId: 'frutas_verduras',
-          quantity: 1,
-          unit: 'kg',
-          price: 2.10,
-          suggestedLocation: 'pantry',
-          estimatedShelfLifeDays: 5,
-          selected: true,
-        },
-        {
-          id: 'fb-4',
-          rawName: 'TOMATE ENSALADA',
-          normalizedName: 'Tomates para ensalada',
-          categoryId: 'frutas_verduras',
-          quantity: 1,
-          unit: 'kg',
-          price: 1.80,
-          suggestedLocation: 'fridge',
-          estimatedShelfLifeDays: 7,
-          selected: true,
-        },
-        {
-          id: 'fb-5',
-          rawName: 'PAN DE MOLDE',
-          normalizedName: 'Pan de molde clásico',
-          categoryId: 'panaderia_pasteleria',
-          quantity: 1,
-          unit: 'paquete',
-          price: 1.40,
-          suggestedLocation: 'pantry',
-          estimatedShelfLifeDays: 10,
-          selected: true,
-        },
-      ],
-    };
-
-    return res.json(fallbackResponse);
-  } catch (error) {
-    console.error('Error procesando ticket:', error);
-    return res.status(500).json({ error: 'Error al procesar el ticket de compra' });
-  }
 });
 
 // ==========================================
@@ -405,5 +293,5 @@ if (fs.existsSync(distPath)) {
 }
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`🚀 Servidor ComprAI activo en http://0.0.0.0:${port}`);
+  console.log(`🚀 Servidor ComprAI (Zero-Cost On-Device OCR + Sync) activo en http://0.0.0.0:${port}`);
 });

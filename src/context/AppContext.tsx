@@ -21,6 +21,10 @@ interface AppContextType {
   setShowShareModal: (show: boolean) => void;
   forceSyncNow: () => Promise<void>;
 
+  // Deduplicación de tickets (SHA-256)
+  registeredReceiptHashes: string[];
+  checkReceiptDuplicate: (hash: string) => Promise<boolean>;
+
   // Lista de Compra
   shoppingItems: ShoppingItem[];
   addShoppingItem: (item: Omit<ShoppingItem, 'id' | 'addedAt' | 'isCompleted'>) => void;
@@ -32,7 +36,12 @@ interface AppContextType {
   // Despensa / Inventario
   pantryItems: PantryItem[];
   addPantryItem: (item: Omit<PantryItem, 'id' | 'consumed'>) => void;
-  addPantryItemsFromReceipt: (items: ScannedReceiptItem[], receiptDate: string, storeName?: string) => void;
+  addPantryItemsFromReceipt: (
+    items: ScannedReceiptItem[],
+    receiptDate: string,
+    storeName?: string,
+    receiptHash?: string
+  ) => void;
   removePantryItem: (id: string) => void;
   markPantryItemConsumed: (id: string) => void;
   updatePantryItem: (id: string, updates: Partial<PantryItem>) => void;
@@ -53,92 +62,26 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const INITIAL_SHOPPING_ITEMS: ShoppingItem[] = [
   {
     id: 's-1',
-    name: 'Leche entera',
+    name: 'Mleko 3,2%',
     categoryId: 'lacteos_huevos',
     quantity: 2,
-    unit: 'l',
+    unit: 'szt',
     isCompleted: false,
     addedAt: new Date().toISOString(),
   },
   {
     id: 's-2',
-    name: 'Pechuga de pollo',
+    name: 'Filet z piersi kurczaka',
     categoryId: 'carnes_aves',
     quantity: 1,
-    unit: 'bandeja',
+    unit: 'op',
     isCompleted: false,
-    notes: 'Para cenar el martes',
-    addedAt: new Date().toISOString(),
-  },
-  {
-    id: 's-3',
-    name: 'Plátanos de Canarias',
-    categoryId: 'frutas_verduras',
-    quantity: 1,
-    unit: 'kg',
-    isCompleted: true,
-    addedAt: new Date().toISOString(),
-  },
-  {
-    id: 's-4',
-    name: 'Aceite de oliva virgen extra',
-    categoryId: 'despensa_conservas',
-    quantity: 1,
-    unit: 'l',
-    isCompleted: false,
+    notes: 'Para la cena',
     addedAt: new Date().toISOString(),
   },
 ];
 
-const INITIAL_PANTRY_ITEMS: PantryItem[] = [
-  {
-    id: 'p-1',
-    name: 'Salmón fresco en lomos',
-    categoryId: 'pescados_mariscos',
-    location: 'fridge',
-    quantity: 1,
-    unit: 'bandeja',
-    purchaseDate: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0],
-    expirationDate: new Date(Date.now() + 1 * 86400000).toISOString().split('T')[0],
-    consumed: false,
-    sourceReceiptStore: 'Mercadona',
-  },
-  {
-    id: 'p-2',
-    name: 'Yogur natural',
-    categoryId: 'lacteos_huevos',
-    location: 'fridge',
-    quantity: 4,
-    unit: 'uds',
-    purchaseDate: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0],
-    expirationDate: new Date(Date.now() + 8 * 86400000).toISOString().split('T')[0],
-    consumed: false,
-    sourceReceiptStore: 'Mercadona',
-  },
-  {
-    id: 'p-3',
-    name: 'Fresas silvestres',
-    categoryId: 'frutas_verduras',
-    location: 'fridge',
-    quantity: 1,
-    unit: 'tarrina',
-    purchaseDate: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0],
-    expirationDate: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0],
-    consumed: false,
-    sourceReceiptStore: 'Frutería del barrio',
-  },
-  {
-    id: 'p-4',
-    name: 'Arroz redondo',
-    categoryId: 'despensa_conservas',
-    location: 'pantry',
-    quantity: 1,
-    unit: 'kg',
-    purchaseDate: new Date(Date.now() - 10 * 86400000).toISOString().split('T')[0],
-    expirationDate: new Date(Date.now() + 300 * 86400000).toISOString().split('T')[0],
-    consumed: false,
-  },
-];
+const INITIAL_PANTRY_ITEMS: PantryItem[] = [];
 
 const normalizeHouseholdCode = (raw: string) =>
   raw.trim().toUpperCase().replace(/[^A-Z0-9-_]/g, '').slice(0, 24);
@@ -147,17 +90,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeTab, setActiveTab] = useState<'shopping' | 'pantry' | 'scanner'>('shopping');
   const [showShareModal, setShowShareModal] = useState(false);
 
-  // Identificador único de esta sesión/teléfono
   const clientIdRef = useRef<string>(
     'client-' + Date.now() + '-' + Math.random().toString(36).substring(2, 8)
   );
 
-  // Nombre del miembro de la pareja en este móvil
   const [userName, setUserNameState] = useState<string>(() => {
     return localStorage.getItem('comprai_user_name') || '';
   });
 
-  // Código de hogar compartido (detecta ?hogar=CODIGO en la URL si viene de invitación por WhatsApp)
   const [householdCode, setHouseholdCodeState] = useState<string>(() => {
     try {
       const params = new URLSearchParams(window.location.search);
@@ -166,7 +106,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const clean = normalizeHouseholdCode(urlCode);
         if (clean) {
           localStorage.setItem('comprai_household_code', clean);
-          // Limpiar query param de la URL sin recargar
           const newUrl = window.location.pathname + window.location.hash;
           window.history.replaceState({}, '', newUrl);
           return clean;
@@ -200,9 +139,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  // Refs para tener siempre la última versión al empujar al servidor
+  const [registeredReceiptHashes, setRegisteredReceiptHashes] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('comprai_receipt_hashes');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const shoppingRef = useRef(shoppingItems);
   const pantryRef = useRef(pantryItems);
+  const hashesRef = useRef(registeredReceiptHashes);
   const isApplyingRemoteRef = useRef(false);
 
   useEffect(() => {
@@ -214,6 +162,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     pantryRef.current = pantryItems;
     localStorage.setItem('comprai_pantry_items', JSON.stringify(pantryItems));
   }, [pantryItems]);
+
+  useEffect(() => {
+    hashesRef.current = registeredReceiptHashes;
+    localStorage.setItem('comprai_receipt_hashes', JSON.stringify(registeredReceiptHashes));
+  }, [registeredReceiptHashes]);
 
   const setUserName = (name: string) => {
     const trimmed = name.trim();
@@ -233,7 +186,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Empujar cambios locales al servidor compartido
   const pushToServer = useCallback(
-    async (nextShopping: ShoppingItem[], nextPantry: PantryItem[]) => {
+    async (
+      nextShopping: ShoppingItem[],
+      nextPantry: PantryItem[],
+      nextHashes: string[] = hashesRef.current
+    ) => {
       if (!householdCode) {
         setSyncStatus('local');
         return;
@@ -245,6 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           body: JSON.stringify({
             shoppingItems: nextShopping,
             pantryItems: nextPantry,
+            registeredReceiptHashes: nextHashes,
             lastUpdatedBy: userName || 'Tu pareja',
             clientId: clientIdRef.current,
           }),
@@ -255,6 +213,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (typeof data.connectedDevices === 'number') {
             setConnectedDevices(Math.max(1, data.connectedDevices));
           }
+          if (Array.isArray(data.registeredReceiptHashes)) {
+            setRegisteredReceiptHashes(data.registeredReceiptHashes);
+          }
         } else {
           setSyncStatus('error');
         }
@@ -263,6 +224,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     },
     [householdCode, userName]
+  );
+
+  // Verificar contra base de datos local y remota si el hash SHA-256 ya fue registrado
+  const checkReceiptDuplicate = useCallback(
+    async (hash: string): Promise<boolean> => {
+      if (!hash) return false;
+      const cleanHash = hash.trim().toLowerCase();
+
+      // 1. Verificar en estado local sincronizado
+      if (hashesRef.current.some((h) => h.toLowerCase() === cleanHash)) {
+        return true;
+      }
+
+      // 2. Verificar contra el backend remoto del hogar compartido
+      if (householdCode) {
+        try {
+          const res = await fetch(
+            `/api/household/${encodeURIComponent(householdCode)}/receipt-hash/${encodeURIComponent(
+              cleanHash
+            )}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data.isDuplicate) {
+              return true;
+            }
+          }
+        } catch {
+          // Si está offline, basta con la verificación local
+        }
+      }
+
+      return false;
+    },
+    [householdCode]
   );
 
   // Obtener o inicializar estado desde el servidor
@@ -283,6 +279,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isApplyingRemoteRef.current = true;
         setShoppingItems(data.shoppingItems);
         setPantryItems(data.pantryItems);
+        if (Array.isArray(data.registeredReceiptHashes)) {
+          const merged = Array.from(
+            new Set([...hashesRef.current, ...data.registeredReceiptHashes])
+          );
+          setRegisteredReceiptHashes(merged);
+        }
         if (data.lastUpdatedBy) setLastUpdatedBy(data.lastUpdatedBy);
         if (typeof data.connectedDevices === 'number') {
           setConnectedDevices(Math.max(1, data.connectedDevices));
@@ -292,15 +294,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           isApplyingRemoteRef.current = false;
         }, 50);
       } else {
-        // Si el hogar aún no existe en el servidor, subimos nuestros datos actuales para crearlo
-        await pushToServer(shoppingRef.current, pantryRef.current);
+        await pushToServer(shoppingRef.current, pantryRef.current, hashesRef.current);
       }
     } catch {
       setSyncStatus('error');
     }
   }, [householdCode, pushToServer]);
 
-  // Conexión en tiempo real (Server-Sent Events) + reconexión al desbloquear el móvil
+  // Conexión en tiempo real (Server-Sent Events)
   useEffect(() => {
     if (!householdCode) {
       setSyncStatus('local');
@@ -333,6 +334,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             isApplyingRemoteRef.current = true;
             setShoppingItems(payload.shoppingItems);
             setPantryItems(payload.pantryItems);
+            if (Array.isArray(payload.registeredReceiptHashes)) {
+              setRegisteredReceiptHashes(payload.registeredReceiptHashes);
+            }
             if (payload.lastUpdatedBy) {
               setLastUpdatedBy(payload.lastUpdatedBy);
             }
@@ -343,7 +347,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
       } catch {
-        // ignore parse errors
+        // ignore
       }
     };
 
@@ -351,7 +355,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSyncStatus('error');
     };
 
-    // Cuando el usuario vuelve a abrir la app en iPhone o Android, sincronizar al instante
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         forceSyncNow();
@@ -365,7 +368,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [householdCode, userName, forceSyncNow]);
 
-  // Acciones de Lista de Compra (actualizan estado local y sincronizan con la pareja)
+  // Acciones de Lista de Compra
   const addShoppingItem = (item: Omit<ShoppingItem, 'id' | 'addedAt' | 'isCompleted'>) => {
     const newItem: ShoppingItem = {
       ...item,
@@ -376,7 +379,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setShoppingItems((prev) => {
       const next = [newItem, ...prev];
-      pushToServer(next, pantryRef.current);
+      pushToServer(next, pantryRef.current, hashesRef.current);
       return next;
     });
   };
@@ -402,7 +405,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         return item;
       });
-      pushToServer(next, pantryRef.current);
+      pushToServer(next, pantryRef.current, hashesRef.current);
       return next;
     });
   };
@@ -410,7 +413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeShoppingItem = (id: string) => {
     setShoppingItems((prev) => {
       const next = prev.filter((item) => item.id !== id);
-      pushToServer(next, pantryRef.current);
+      pushToServer(next, pantryRef.current, hashesRef.current);
       return next;
     });
   };
@@ -418,7 +421,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const clearCompletedShoppingItems = () => {
     setShoppingItems((prev) => {
       const next = prev.filter((item) => !item.isCompleted);
-      pushToServer(next, pantryRef.current);
+      pushToServer(next, pantryRef.current, hashesRef.current);
       return next;
     });
   };
@@ -450,7 +453,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setPantryItems(nextPantry);
     setShoppingItems(nextShopping);
-    pushToServer(nextShopping, nextPantry);
+    pushToServer(nextShopping, nextPantry, hashesRef.current);
     setActiveTab('pantry');
   };
 
@@ -464,7 +467,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setPantryItems((prev) => {
       const next = [newItem, ...prev];
-      pushToServer(shoppingRef.current, next);
+      pushToServer(shoppingRef.current, next, hashesRef.current);
       return next;
     });
   };
@@ -472,7 +475,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addPantryItemsFromReceipt = (
     items: ScannedReceiptItem[],
     receiptDate: string,
-    storeName?: string
+    storeName?: string,
+    receiptHash?: string
   ) => {
     const selectedItems = items.filter((i) => i.selected);
     const dateToUse = receiptDate || new Date().toISOString().split('T')[0];
@@ -483,7 +487,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       categoryId: item.categoryId,
       location: item.suggestedLocation,
       quantity: item.quantity,
-      unit: item.unit || 'ud',
+      unit: item.unit || 'szt',
+      price: item.price,
       purchaseDate: dateToUse,
       expirationDate: calculateExpirationDate(dateToUse, item.estimatedShelfLifeDays),
       consumed: false,
@@ -491,9 +496,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addedBy: userName || undefined,
     }));
 
+    const nextHashes = receiptHash
+      ? Array.from(new Set([...hashesRef.current, receiptHash.trim().toLowerCase()]))
+      : hashesRef.current;
+
+    if (receiptHash) {
+      setRegisteredReceiptHashes(nextHashes);
+    }
+
     setPantryItems((prev) => {
       const next = [...newPantryItems, ...prev];
-      pushToServer(shoppingRef.current, next);
+      pushToServer(shoppingRef.current, next, nextHashes);
       return next;
     });
     setActiveTab('pantry');
@@ -502,7 +515,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removePantryItem = (id: string) => {
     setPantryItems((prev) => {
       const next = prev.filter((item) => item.id !== id);
-      pushToServer(shoppingRef.current, next);
+      pushToServer(shoppingRef.current, next, hashesRef.current);
       return next;
     });
   };
@@ -510,7 +523,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const markPantryItemConsumed = (id: string) => {
     setPantryItems((prev) => {
       const next = prev.map((item) => (item.id === id ? { ...item, consumed: true } : item));
-      pushToServer(shoppingRef.current, next);
+      pushToServer(shoppingRef.current, next, hashesRef.current);
       return next;
     });
   };
@@ -518,7 +531,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updatePantryItem = (id: string, updates: Partial<PantryItem>) => {
     setPantryItems((prev) => {
       const next = prev.map((item) => (item.id === id ? { ...item, ...updates } : item));
-      pushToServer(shoppingRef.current, next);
+      pushToServer(shoppingRef.current, next, hashesRef.current);
       return next;
     });
   };
@@ -576,6 +589,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showShareModal,
         setShowShareModal,
         forceSyncNow,
+        registeredReceiptHashes,
+        checkReceiptDuplicate,
         shoppingItems,
         addShoppingItem,
         toggleShoppingItem,

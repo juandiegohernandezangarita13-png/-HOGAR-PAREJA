@@ -120,93 +120,266 @@ interface ProductPattern {
   category: string;
   shelfLifeDays: number;
   location: StorageLocation;
-  normalizedExample?: string;
 }
 
 const SPECIFIC_PRODUCT_RULES: ProductPattern[] = [
-  // Pescados y mariscos
-  { keywords: ['pescado', 'merluza', 'salmon', 'salmón', 'lubina', 'dorada', 'bacalao', 'atun fresco', 'atún fresco', 'gamba', 'langostino'], category: 'pescados_mariscos', shelfLifeDays: 2, location: 'fridge' },
-  { keywords: ['mejillon', 'almeja', 'pulpo', 'calamar', 'sepia'], category: 'pescados_mariscos', shelfLifeDays: 2, location: 'fridge' },
+  // Pescados y mariscos (ES + PL)
+  {
+    keywords: [
+      'pescado', 'merluza', 'salmon', 'salmón', 'lubina', 'dorada', 'bacalao', 'atun fresco', 'gamba', 'langostino',
+      'łosoś', 'losos', 'dorsz', 'ryba', 'pstrąg', 'pstrag', 'śledź', 'sledz', 'makrela', 'krewetki',
+    ],
+    category: 'pescados_mariscos',
+    shelfLifeDays: 2,
+    location: 'fridge',
+  },
+  {
+    keywords: ['mejillon', 'almeja', 'pulpo', 'calamar', 'sepia'],
+    category: 'pescados_mariscos',
+    shelfLifeDays: 2,
+    location: 'fridge',
+  },
 
-  // Carnes y aves
-  { keywords: ['pollo', 'pechuga', 'alitas', 'pavo', 'carne picada', 'hamburguesa'], category: 'carnes_aves', shelfLifeDays: 2, location: 'fridge' },
-  { keywords: ['ternera', 'cerdo', 'lomo', 'costilla', 'solomillo', 'chuleta'], category: 'carnes_aves', shelfLifeDays: 4, location: 'fridge' },
-  { keywords: ['conejo', 'cordero'], category: 'carnes_aves', shelfLifeDays: 3, location: 'fridge' },
+  // Carnes y aves (ES + PL)
+  {
+    keywords: [
+      'pollo', 'pechuga', 'alitas', 'pavo', 'carne picada', 'hamburguesa',
+      'kurczak', 'pierś', 'piers', 'filet z piersi', 'indyk', 'mięso mielone', 'mieso mielone', 'drób', 'drob', 'skrzydełka', 'udziec',
+    ],
+    category: 'carnes_aves',
+    shelfLifeDays: 3,
+    location: 'fridge',
+  },
+  {
+    keywords: [
+      'ternera', 'cerdo', 'lomo', 'costilla', 'solomillo', 'chuleta',
+      'wieprz', 'schab', 'wołow', 'wolow', 'karkówka', 'karkowka', 'boczek', 'żeberka',
+    ],
+    category: 'carnes_aves',
+    shelfLifeDays: 4,
+    location: 'fridge',
+  },
 
-  // Frutas frescas y delicadas
-  { keywords: ['fresa', 'fresón', 'frambuesa', 'arandano', 'arándano', 'mora'], category: 'frutas_verduras', shelfLifeDays: 3, location: 'fridge' },
-  { keywords: ['platano', 'plátano', 'banana', 'aguacate', 'pera', 'melocoton', 'melocotón'], category: 'frutas_verduras', shelfLifeDays: 5, location: 'pantry' },
-  { keywords: ['manzana', 'naranja', 'mandarina', 'limon', 'limón'], category: 'frutas_verduras', shelfLifeDays: 14, location: 'pantry' },
+  // Frutas frescas y delicadas (ES + PL)
+  {
+    keywords: [
+      'fresa', 'fresón', 'frambuesa', 'arandano', 'arándano', 'mora',
+      'truskawk', 'malin', 'borówk', 'borowk', 'jagod',
+    ],
+    category: 'frutas_verduras',
+    shelfLifeDays: 3,
+    location: 'fridge',
+  },
+  {
+    keywords: [
+      'platano', 'plátano', 'banana', 'aguacate', 'pera', 'melocoton',
+      'banan', 'awokado', 'gruszk', 'brzoskwin', 'winogron',
+    ],
+    category: 'frutas_verduras',
+    shelfLifeDays: 5,
+    location: 'pantry',
+  },
+  {
+    keywords: [
+      'manzana', 'naranja', 'mandarina', 'limon', 'limón',
+      'jabłk', 'jablk', 'pomarańcz', 'pomarancz', 'mandarynk', 'cytryn',
+    ],
+    category: 'frutas_verduras',
+    shelfLifeDays: 14,
+    location: 'pantry',
+  },
 
-  // Verduras
-  { keywords: ['lechuga', 'espinaca', 'canónigos', 'rucula', 'rúcula', 'brocoli', 'brócoli', 'champinon', 'champiñón', 'setas'], category: 'frutas_verduras', shelfLifeDays: 4, location: 'fridge' },
-  { keywords: ['tomate', 'pepino', 'pimiento', 'zanahoria', 'calabacin', 'calabacín'], category: 'frutas_verduras', shelfLifeDays: 8, location: 'fridge' },
-  { keywords: ['patata', 'papa', 'cebolla', 'ajo', 'calabaza'], category: 'frutas_verduras', shelfLifeDays: 30, location: 'pantry' },
+  // Verduras (ES + PL)
+  {
+    keywords: [
+      'lechuga', 'espinaca', 'canónigos', 'rucula', 'rúcula', 'brocoli', 'champinon', 'setas',
+      'sałata', 'salata', 'szpinak', 'rukola', 'brokuł', 'brokul', 'pieczark', 'koperek', 'natka', 'szczypior',
+    ],
+    category: 'frutas_verduras',
+    shelfLifeDays: 4,
+    location: 'fridge',
+  },
+  {
+    keywords: [
+      'tomate', 'pepino', 'pimiento', 'zanahoria', 'calabacin',
+      'pomidor', 'ogórek', 'ogorek', 'papryk', 'marchew', 'cukini', 'rzodkiew', 'kalafior',
+    ],
+    category: 'frutas_verduras',
+    shelfLifeDays: 8,
+    location: 'fridge',
+  },
+  {
+    keywords: [
+      'patata', 'papa', 'cebolla', 'ajo', 'calabaza',
+      'ziemniak', 'cebul', 'czosnek', 'dynia', 'burak',
+    ],
+    category: 'frutas_verduras',
+    shelfLifeDays: 30,
+    location: 'pantry',
+  },
 
-  // Lácteos y huevos
-  { keywords: ['huevo', 'huevos'], category: 'lacteos_huevos', shelfLifeDays: 21, location: 'fridge' },
-  { keywords: ['leche fresca', 'leche pasteurizada'], category: 'lacteos_huevos', shelfLifeDays: 5, location: 'fridge' },
-  { keywords: ['leche', 'lech'], category: 'lacteos_huevos', shelfLifeDays: 14, location: 'fridge' },
-  { keywords: ['yogur', 'yogurt', 'natillas', 'flan', 'kefir', 'kéfir'], category: 'lacteos_huevos', shelfLifeDays: 18, location: 'fridge' },
-  { keywords: ['mantequilla', 'nata'], category: 'lacteos_huevos', shelfLifeDays: 25, location: 'fridge' },
+  // Lácteos y huevos (ES + PL)
+  {
+    keywords: ['huevo', 'huevos', 'jaja', 'jajka', 'jajko'],
+    category: 'lacteos_huevos',
+    shelfLifeDays: 21,
+    location: 'fridge',
+  },
+  {
+    keywords: ['leche fresca', 'leche pasteurizada', 'mleko świeże', 'mleko swieze'],
+    category: 'lacteos_huevos',
+    shelfLifeDays: 5,
+    location: 'fridge',
+  },
+  {
+    keywords: ['leche', 'lech', 'mleko', 'mlek'],
+    category: 'lacteos_huevos',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    keywords: [
+      'yogur', 'yogurt', 'natillas', 'flan', 'kefir', 'kéfir',
+      'jogurt', 'maślanka', 'maslanka', 'serek wiejski', 'skyrem', 'skyr', 'deser mleczny',
+    ],
+    category: 'lacteos_huevos',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    keywords: [
+      'mantequilla', 'nata',
+      'masło', 'maslo', 'śmietana', 'smietana', 'śmietanka', 'margaryna',
+    ],
+    category: 'lacteos_huevos',
+    shelfLifeDays: 25,
+    location: 'fridge',
+  },
 
-  // Quesos y embutidos
-  { keywords: ['queso fresco', 'mozzarella', 'ricotta', 'burrata'], category: 'embutidos_quesos', shelfLifeDays: 5, location: 'fridge' },
-  { keywords: ['queso curado', 'queso semi', 'parmesano', 'manchego'], category: 'embutidos_quesos', shelfLifeDays: 45, location: 'fridge' },
-  { keywords: ['jamon york', 'jamón york', 'pavo lonchas', 'chopped', 'mortadela'], category: 'embutidos_quesos', shelfLifeDays: 6, location: 'fridge' },
-  { keywords: ['jamon serrano', 'jamón ibérico', 'chorizo', 'salchichon', 'fuet'], category: 'embutidos_quesos', shelfLifeDays: 20, location: 'fridge' },
+  // Quesos y embutidos (ES + PL)
+  {
+    keywords: [
+      'queso fresco', 'mozzarella', 'ricotta', 'burrata',
+      'twaróg', 'twarog', 'twarożek', 'feta', 'serek',
+    ],
+    category: 'embutidos_quesos',
+    shelfLifeDays: 6,
+    location: 'fridge',
+  },
+  {
+    keywords: [
+      'queso curado', 'queso semi', 'parmesano', 'manchego',
+      'ser gouda', 'ser żółty', 'ser zolty', 'ser edamski', 'ser królewski', 'ser podlaski', 'cheddar',
+    ],
+    category: 'embutidos_quesos',
+    shelfLifeDays: 21,
+    location: 'fridge',
+  },
+  {
+    keywords: [
+      'jamon york', 'jamón york', 'pavo lonchas', 'chopped', 'mortadela',
+      'szynka', 'polędwica', 'poledwica', 'parówki', 'parowki', 'kiełbasa', 'kielbasa', 'kabanos', 'salami', 'pasztet',
+    ],
+    category: 'embutidos_quesos',
+    shelfLifeDays: 7,
+    location: 'fridge',
+  },
 
-  // Panadería
-  { keywords: ['pan barra', 'baguette', 'pan fresco', 'barra pan'], category: 'panaderia_pasteleria', shelfLifeDays: 2, location: 'pantry' },
-  { keywords: ['pan molde', 'pan de molde', 'tostadas', 'croissant', 'magdalenas'], category: 'panaderia_pasteleria', shelfLifeDays: 10, location: 'pantry' },
+  // Panadería (ES + PL)
+  {
+    keywords: [
+      'pan barra', 'baguette', 'pan fresco', 'barra pan',
+      'chleb', 'bułka', 'bulka', 'kajzerka', 'bagietka', 'rogal', 'pączek', 'paczek', 'drożdżówka',
+    ],
+    category: 'panaderia_pasteleria',
+    shelfLifeDays: 3,
+    location: 'pantry',
+  },
+  {
+    keywords: ['pan molde', 'pan de molde', 'tostadas', 'croissant', 'chleb tostowy', 'tortilla'],
+    category: 'panaderia_pasteleria',
+    shelfLifeDays: 10,
+    location: 'pantry',
+  },
 
-  // Congelados
-  { keywords: ['congelado', 'helado', 'pizza congelada', 'varitas de merluza', 'verdura congelada'], category: 'congelados', shelfLifeDays: 120, location: 'freezer' },
+  // Congelados (ES + PL)
+  {
+    keywords: [
+      'congelado', 'helado', 'pizza congelada',
+      'mrożon', 'mrozon', 'lody', 'frytki', 'pierogi mroż',
+    ],
+    category: 'congelados',
+    shelfLifeDays: 120,
+    location: 'freezer',
+  },
 
-  // Despensa y conservas
-  { keywords: ['atun lata', 'atún lata', 'sardinas lata', 'conserva', 'lentejas bote', 'garbanzos bote'], category: 'despensa_conservas', shelfLifeDays: 730, location: 'pantry' },
-  { keywords: ['pasta', 'espaguetis', 'macarrones', 'arroz', 'harina', 'legumbres'], category: 'despensa_conservas', shelfLifeDays: 365, location: 'pantry' },
-  { keywords: ['aceite', 'vinagre', 'sal', 'azucar', 'azúcar', 'especias', 'cafe', 'café'], category: 'despensa_conservas', shelfLifeDays: 365, location: 'pantry' },
-  { keywords: ['galletas', 'cereal', 'cereales', 'chocolate'], category: 'despensa_conservas', shelfLifeDays: 90, location: 'pantry' },
+  // Despensa y conservas (ES + PL)
+  {
+    keywords: [
+      'atun lata', 'conserva', 'lentejas bote',
+      'tuńczyk', 'tunczyk', 'kukurydza', 'groszek', 'fasola', 'konserwa', 'przecier', 'passata',
+    ],
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    keywords: [
+      'pasta', 'espaguetis', 'macarrones', 'arroz', 'harina', 'legumbres',
+      'makaron', 'ryż', 'ryz', 'mąka', 'maka', 'kasza', 'płatki', 'platki',
+    ],
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    keywords: [
+      'aceite', 'vinagre', 'sal', 'azucar', 'azúcar', 'cafe', 'café',
+      'olej', 'oliwa', 'cukier', 'sól', 'sol', 'kawa', 'herbata', 'ketchup', 'majonez', 'musztarda',
+    ],
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    keywords: [
+      'galletas', 'cereal', 'chocolate',
+      'czekolad', 'ciastk', 'baton', 'chipsy', 'wafel',
+    ],
+    category: 'despensa_conservas',
+    shelfLifeDays: 90,
+    location: 'pantry',
+  },
 
-  // Bebidas
-  { keywords: ['agua', 'zumo', 'refresco', 'cola', 'cerveza', 'vino'], category: 'bebidas', shelfLifeDays: 90, location: 'pantry' },
+  // Bebidas (ES + PL)
+  {
+    keywords: [
+      'agua', 'zumo', 'refresco', 'cola', 'cerveza', 'vino',
+      'woda', 'sok', 'napój', 'napoj', 'piwo', 'wino', 'pepsi', 'tymbark', 'żubr', 'zubr', 'tyskie',
+    ],
+    category: 'bebidas',
+    shelfLifeDays: 90,
+    location: 'pantry',
+  },
 
-  // Limpieza
-  { keywords: ['lejia', 'detergente', 'suavizante', 'lavavajillas', 'papel higienico', 'champu', 'gel'], category: 'limpieza_hogar', shelfLifeDays: 365, location: 'pantry' }
+  // Limpieza (ES + PL)
+  {
+    keywords: [
+      'lejia', 'detergente', 'suavizante', 'lavavajillas', 'papel higienico', 'champu', 'gel',
+      'papier toalet', 'ręcznik', 'recznik', 'mydło', 'mydlo', 'szampon', 'płyn do', 'plyn do', 'proszek', 'kapsułki',
+    ],
+    category: 'limpieza_hogar',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
 ];
 
 export function normalizeProductName(rawName: string): string {
   let clean = rawName
-    .replace(/^(\d+\.?\d*|\d+x\d+)\s*(kg|g|l|ml|ud|pack|uds|gr)?\s*[\*x-]?\s*/i, '')
+    .replace(/^(\*+|OP\.|RABAT|PROMOCJA)\s*/i, '')
+    .replace(/\s+[A-G]$/i, '')
     .trim();
 
-  // Diccionario común de tickets españoles
-  const replacements: Record<string, string> = {
-    'lech ent': 'Leche entera',
-    'lech desn': 'Leche desnatada',
-    'lech sem': 'Leche semidesnatada',
-    'pech poll': 'Pechuga de pollo',
-    'plat canar': 'Plátano de Canarias',
-    'tom ensal': 'Tomate de ensalada',
-    'pan mold': 'Pan de molde',
-    'huev cam': 'Huevos camperos',
-    'yog nat': 'Yogur natural',
-    'qso cur': 'Queso curado',
-    'espag': 'Espaguetis',
-    'arroz red': 'Arroz redondo',
-    'aceit oliv': 'Aceite de oliva',
-    'pap hig': 'Papel higiénico',
-  };
-
-  const lower = clean.toLowerCase();
-  for (const [abbr, full] of Object.entries(replacements)) {
-    if (lower.includes(abbr)) {
-      return full;
-    }
-  }
-
-  // Capitalize first letter
   if (clean.length > 0) {
     clean = clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
   }
@@ -232,7 +405,6 @@ export function detectCategoryAndShelfLife(productName: string): {
     }
   }
 
-  // Fallback por defecto
   return {
     categoryId: 'otros',
     shelfLifeDays: 14,

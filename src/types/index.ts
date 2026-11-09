@@ -38,6 +38,7 @@ export interface PantryItem {
   notes?: string;
   sourceReceiptStore?: string;
   addedBy?: string;
+  price?: number;
 }
 
 export interface ScannedReceiptItem {
@@ -53,10 +54,30 @@ export interface ScannedReceiptItem {
   selected: boolean;
 }
 
+export interface PolishFiscalTicketParsed {
+  tienda: string;
+  nip: string;
+  fecha: string;
+  hora: string;
+  total: number;
+  hash: string;
+  productos: Array<{
+    nombre: string;
+    precio: number;
+    cantidad: number;
+    rawLine?: string;
+  }>;
+}
+
 export interface ScannedReceiptResult {
   storeName: string;
   receiptDate: string; // YYYY-MM-DD
+  receiptTime?: string; // HH:MM
+  nip?: string;
   totalAmount?: number;
+  currency?: string;
+  receiptHash?: string; // SHA-256(NIP + FECHA + HORA + TOTAL_PLN)
   items: ScannedReceiptItem[];
   rawTextPreview?: string;
+  processingTimeMs?: number;
 }
