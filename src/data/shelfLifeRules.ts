@@ -189,14 +189,15 @@ const SPECIFIC_PRODUCT_RULES: ProductPattern[] = [
     location: 'pantry',
   },
 
-  // Verduras (ES + PL)
+  // Verduras (ES + PL + EN)
   {
     keywords: [
-      'lechuga', 'espinaca', 'canónigos', 'rucula', 'rúcula', 'brocoli', 'champinon', 'setas',
-      'sałata', 'salata', 'szpinak', 'rukola', 'brokuł', 'brokul', 'pieczark', 'koperek', 'natka', 'szczypior',
+      'lechuga', 'espinaca', 'canónigos', 'rucula', 'rúcula', 'brocoli', 'brócoli', 'champinon', 'champiñon', 'champiñón', 'champiñones', 'setas', 'berenjena', 'berenjenas', 'maiz', 'maíz', 'calabacin', 'calabacín',
+      'sałata', 'salata', 'szpinak', 'rukola', 'brokuł', 'brokul', 'pieczark', 'koperek', 'natka', 'szczypior', 'bakłażan', 'baklazan', 'kukurydza',
+      'lettuce', 'spinach', 'arugula', 'rocket', 'broccoli', 'mushroom', 'mushrooms', 'eggplant', 'aubergine', 'corn', 'zucchini',
     ],
     category: 'frutas_verduras',
-    shelfLifeDays: 4,
+    shelfLifeDays: 5,
     location: 'fridge',
   },
   {

@@ -1,0 +1,1311 @@
+import { Language } from '../i18n/translations';
+
+export interface TranslatedProductResult {
+  translatedName: string;
+  originalRawName: string;
+  detectedBase: string;
+  category: string;
+  shelfLifeDays: number;
+  location: 'fridge' | 'freezer' | 'pantry';
+}
+
+interface GroceryDictionaryEntry {
+  plKeywords: string[];
+  esName: string;
+  enName: string;
+  plNormalized: string;
+  category: string;
+  shelfLifeDays: number;
+  location: 'fridge' | 'freezer' | 'pantry';
+}
+
+/**
+ * Diccionario integral de productos de supermercado en Polonia (Lidl, Biedronka, Żabka, Dino, Auchan, Carrefour)
+ * mapeados a Español, Inglés y Polaco normalizado con categoría y conservación.
+ */
+const POLISH_GROCERY_DICTIONARY: GroceryDictionaryEntry[] = [
+  // --- VERDURAS & FRUTAS (frutas_verduras) ---
+  {
+    plKeywords: ['bakłażan', 'baklazan', 'oberżyna', 'oberzyna'],
+    esName: 'Berenjena',
+    enName: 'Eggplant',
+    plNormalized: 'Bakłażan',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['kukurydza goto', 'kukurydza gotow', 'kukurydza kolba'],
+    esName: 'Maíz dulce cocido',
+    enName: 'Cooked corn',
+    plNormalized: 'Kukurydza gotowana',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['kukurydza', 'corn'],
+    esName: 'Maíz',
+    enName: 'Corn',
+    plNormalized: 'Kukurydza',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['pomidor malinow', 'pomidory malinow'],
+    esName: 'Tomates rosa (Malinowy)',
+    enName: 'Raspberry tomatoes',
+    plNormalized: 'Pomidory malinowe',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['pomidor cherry', 'pomidorki cherry', 'pomidor koktajl'],
+    esName: 'Tomates cherry',
+    enName: 'Cherry tomatoes',
+    plNormalized: 'Pomidorki cherry',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['pomidor', 'pomidory'],
+    esName: 'Tomates',
+    enName: 'Tomatoes',
+    plNormalized: 'Pomidory',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['ogórek grunt', 'ogorek grunt', 'ogórek szklarn', 'ogorek szklarn', 'ogórek', 'ogorek', 'ogórki', 'ogorki'],
+    esName: 'Pepinos',
+    enName: 'Cucumbers',
+    plNormalized: 'Ogórki',
+    category: 'frutas_verduras',
+    shelfLifeDays: 8,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['ogórki kiszon', 'ogorki kiszon'],
+    esName: 'Pepinillos fermentados polacos (Kiszone)',
+    enName: 'Pickled cucumbers (Kiszone)',
+    plNormalized: 'Ogórki kiszone',
+    category: 'despensa_conservas',
+    shelfLifeDays: 30,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['ogórki konserw', 'ogorki konserw'],
+    esName: 'Pepinillos en vinagre',
+    enName: 'Pickled gherkins',
+    plNormalized: 'Ogórki konserwowe',
+    category: 'despensa_conservas',
+    shelfLifeDays: 180,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['ziemniak', 'ziemniaki', 'kartofel', 'kartofle'],
+    esName: 'Patatas',
+    enName: 'Potatoes',
+    plNormalized: 'Ziemniaki',
+    category: 'frutas_verduras',
+    shelfLifeDays: 28,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['batat', 'bataty', 'słodkie ziemniaki'],
+    esName: 'Batatas / Boniato',
+    enName: 'Sweet potatoes',
+    plNormalized: 'Bataty',
+    category: 'frutas_verduras',
+    shelfLifeDays: 21,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['papryka czerwon', 'papryka czerw', 'papryka żołt', 'papryka zolt', 'papryka mix', 'papryka'],
+    esName: 'Pimiento',
+    enName: 'Bell pepper',
+    plNormalized: 'Papryka',
+    category: 'frutas_verduras',
+    shelfLifeDays: 8,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['cebula żołt', 'cebula zolt', 'cebula czerwon', 'cebula dymka', 'cebula'],
+    esName: 'Cebolla',
+    enName: 'Onion',
+    plNormalized: 'Cebula',
+    category: 'frutas_verduras',
+    shelfLifeDays: 30,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['czosnek'],
+    esName: 'Ajo',
+    enName: 'Garlic',
+    plNormalized: 'Czosnek',
+    category: 'frutas_verduras',
+    shelfLifeDays: 45,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['marchew', 'marchewka'],
+    esName: 'Zanahorias',
+    enName: 'Carrots',
+    plNormalized: 'Marchew',
+    category: 'frutas_verduras',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['cukinia', 'kabaczek'],
+    esName: 'Calabacín',
+    enName: 'Zucchini',
+    plNormalized: 'Cukinia',
+    category: 'frutas_verduras',
+    shelfLifeDays: 8,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['brokuł', 'brokul', 'brokuły'],
+    esName: 'Brócoli',
+    enName: 'Broccoli',
+    plNormalized: 'Brokuł',
+    category: 'frutas_verduras',
+    shelfLifeDays: 5,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['kalafior'],
+    esName: 'Coliflor',
+    enName: 'Cauliflower',
+    plNormalized: 'Kalafior',
+    category: 'frutas_verduras',
+    shelfLifeDays: 6,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['sałata lodow', 'salata lodow', 'sałata rzymsk', 'sałata masłow', 'sałata', 'salata'],
+    esName: 'Lechuga',
+    enName: 'Lettuce',
+    plNormalized: 'Sałata',
+    category: 'frutas_verduras',
+    shelfLifeDays: 5,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['szpinak'],
+    esName: 'Espinacas frescas',
+    enName: 'Fresh spinach',
+    plNormalized: 'Szpinak świeży',
+    category: 'frutas_verduras',
+    shelfLifeDays: 4,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['rukola'],
+    esName: 'Rúcula',
+    enName: 'Arugula / Rocket',
+    plNormalized: 'Rukola',
+    category: 'frutas_verduras',
+    shelfLifeDays: 4,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['roszponka'],
+    esName: 'Canónigos',
+    enName: "Lamb's lettuce",
+    plNormalized: 'Roszponka',
+    category: 'frutas_verduras',
+    shelfLifeDays: 4,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['kapusta pekińsk', 'kapusta pekinsk', 'kapusta biał', 'kapusta bial', 'kapusta czerwon', 'kapusta'],
+    esName: 'Col / Repollo',
+    enName: 'Cabbage',
+    plNormalized: 'Kapusta',
+    category: 'frutas_verduras',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['kapusta kiszon'],
+    esName: 'Chucrut / Col fermentada (Kiszona)',
+    enName: 'Sauerkraut (Kiszona)',
+    plNormalized: 'Kapusta kiszona',
+    category: 'despensa_conservas',
+    shelfLifeDays: 30,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['pieczarki', 'pieczarka'],
+    esName: 'Champiñones',
+    enName: 'Mushrooms',
+    plNormalized: 'Pieczarki',
+    category: 'frutas_verduras',
+    shelfLifeDays: 5,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['boczniaki', 'boczniak'],
+    esName: 'Setas de ostra',
+    enName: 'Oyster mushrooms',
+    plNormalized: 'Boczniaki',
+    category: 'frutas_verduras',
+    shelfLifeDays: 4,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['por'],
+    esName: 'Puerro',
+    enName: 'Leek',
+    plNormalized: 'Por',
+    category: 'frutas_verduras',
+    shelfLifeDays: 10,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['seler'],
+    esName: 'Apio',
+    enName: 'Celery',
+    plNormalized: 'Seler',
+    category: 'frutas_verduras',
+    shelfLifeDays: 12,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['pietruszka'],
+    esName: 'Perejil / Chirivía',
+    enName: 'Parsley / Parsnip',
+    plNormalized: 'Pietruszka',
+    category: 'frutas_verduras',
+    shelfLifeDays: 10,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['koperek', 'koper'],
+    esName: 'Eneldo fresco',
+    enName: 'Fresh dill',
+    plNormalized: 'Koperek',
+    category: 'frutas_verduras',
+    shelfLifeDays: 5,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['szczypiorek', 'szczypior'],
+    esName: 'Cebollino',
+    enName: 'Chives',
+    plNormalized: 'Szczypiorek',
+    category: 'frutas_verduras',
+    shelfLifeDays: 5,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['rzodkiewka', 'rzodkiewki'],
+    esName: 'Rábanos',
+    enName: 'Radishes',
+    plNormalized: 'Rzodkiewki',
+    category: 'frutas_verduras',
+    shelfLifeDays: 6,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['buraki gotow', 'burak gotow'],
+    esName: 'Remolacha cocida',
+    enName: 'Cooked beetroot',
+    plNormalized: 'Buraki gotowane',
+    category: 'frutas_verduras',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['burak', 'buraki'],
+    esName: 'Remolacha',
+    enName: 'Beetroot',
+    plNormalized: 'Buraki',
+    category: 'frutas_verduras',
+    shelfLifeDays: 21,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['awokado'],
+    esName: 'Aguacate',
+    enName: 'Avocado',
+    plNormalized: 'Awokado',
+    category: 'frutas_verduras',
+    shelfLifeDays: 5,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['banany', 'banan'],
+    esName: 'Plátanos',
+    enName: 'Bananas',
+    plNormalized: 'Banany',
+    category: 'frutas_verduras',
+    shelfLifeDays: 5,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['jabłka', 'jablka', 'jabłko', 'jablko'],
+    esName: 'Manzanas',
+    enName: 'Apples',
+    plNormalized: 'Jabłka',
+    category: 'frutas_verduras',
+    shelfLifeDays: 14,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['gruszka', 'gruszki'],
+    esName: 'Peras',
+    enName: 'Pears',
+    plNormalized: 'Gruszki',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['cytryna', 'cytryny'],
+    esName: 'Limones',
+    enName: 'Lemons',
+    plNormalized: 'Cytryny',
+    category: 'frutas_verduras',
+    shelfLifeDays: 14,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['limonka', 'limonki'],
+    esName: 'Limas',
+    enName: 'Limes',
+    plNormalized: 'Limonki',
+    category: 'frutas_verduras',
+    shelfLifeDays: 14,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['pomarańcza', 'pomarancza', 'pomarańcze', 'pomarancze'],
+    esName: 'Naranjas',
+    enName: 'Oranges',
+    plNormalized: 'Pomarańcze',
+    category: 'frutas_verduras',
+    shelfLifeDays: 14,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['mandarynka', 'mandarynki'],
+    esName: 'Mandarinas',
+    enName: 'Mandarins',
+    plNormalized: 'Mandarynki',
+    category: 'frutas_verduras',
+    shelfLifeDays: 10,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['truskawka', 'truskawki'],
+    esName: 'Fresas',
+    enName: 'Strawberries',
+    plNormalized: 'Truskawki',
+    category: 'frutas_verduras',
+    shelfLifeDays: 3,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['malina', 'maliny'],
+    esName: 'Frambuesas',
+    enName: 'Raspberries',
+    plNormalized: 'Maliny',
+    category: 'frutas_verduras',
+    shelfLifeDays: 3,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['borówka', 'borowka', 'borówki', 'borowki'],
+    esName: 'Arándanos',
+    enName: 'Blueberries',
+    plNormalized: 'Borówki',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['winogrono', 'winogrona'],
+    esName: 'Uvas',
+    enName: 'Grapes',
+    plNormalized: 'Winogrona',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['arbuz'],
+    esName: 'Sandía',
+    enName: 'Watermelon',
+    plNormalized: 'Arbuz',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['melon'],
+    esName: 'Melón',
+    enName: 'Melon',
+    plNormalized: 'Melon',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['mango'],
+    esName: 'Mango',
+    enName: 'Mango',
+    plNormalized: 'Mango',
+    category: 'frutas_verduras',
+    shelfLifeDays: 6,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['kiwi'],
+    esName: 'Kiwi',
+    enName: 'Kiwi',
+    plNormalized: 'Kiwi',
+    category: 'frutas_verduras',
+    shelfLifeDays: 10,
+    location: 'pantry',
+  },
+
+  // --- LÁCTEOS Y HUEVOS (lacteos_huevos) ---
+  {
+    plKeywords: ['mleko śwież', 'mleko swiez'],
+    esName: 'Leche fresca',
+    enName: 'Fresh milk',
+    plNormalized: 'Mleko świeże',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 6,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['mleko uht', 'mleko 3,2%', 'mleko 2%', 'mleko 1,5%', 'mleko'],
+    esName: 'Leche entera / semidesnatada',
+    enName: 'Milk',
+    plNormalized: 'Mleko',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['jaja', 'jajka', 'jajko'],
+    esName: 'Huevos',
+    enName: 'Eggs',
+    plNormalized: 'Jajka',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 21,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['masło ekstra', 'maslo ekstra', 'masło 82%', 'maslo 82%', 'masło', 'maslo'],
+    esName: 'Mantequilla',
+    enName: 'Butter',
+    plNormalized: 'Masło',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 25,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['margaryna'],
+    esName: 'Margarina',
+    enName: 'Margarine',
+    plNormalized: 'Margaryna',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 45,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['śmietana 18%', 'smietana 18%', 'śmietana 12%', 'smietana 12%', 'śmietana', 'smietana'],
+    esName: 'Nata agria / Crema',
+    enName: 'Sour cream',
+    plNormalized: 'Śmietana',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['śmietanka 30%', 'smietanka 30%', 'śmietanka 36%', 'śmietanka'],
+    esName: 'Nata para montar / cocinar',
+    enName: 'Heavy cream',
+    plNormalized: 'Śmietanka',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['twaróg półtłusty', 'twarog poltlusty', 'twaróg chudy', 'twaróg tłusty', 'twaróg', 'twarog', 'twarożek'],
+    esName: 'Queso fresco tipo quark (Twaróg)',
+    enName: 'Quark / Cottage curd (Twaróg)',
+    plNormalized: 'Twaróg',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 6,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['serek wiejski'],
+    esName: 'Queso cottage (Serek wiejski)',
+    enName: 'Cottage cheese',
+    plNormalized: 'Serek wiejski',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 10,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['serek', 'ser biały', 'ser bialy'],
+    esName: 'Queso crema / untable',
+    enName: 'Cream cheese spread',
+    plNormalized: 'Serek śmietankowy',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 12,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['jogurt naturalny', 'jogurt grecki', 'jogurt'],
+    esName: 'Yogur',
+    enName: 'Yogurt',
+    plNormalized: 'Jogurt',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['kefir'],
+    esName: 'Kéfir',
+    enName: 'Kefir',
+    plNormalized: 'Kefir',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['maślanka', 'maslanka'],
+    esName: 'Suero de mantequilla (Maślanka)',
+    enName: 'Buttermilk',
+    plNormalized: 'Maślanka',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['skyr'],
+    esName: 'Yogur alto en proteína Skyr',
+    enName: 'Skyr yogurt',
+    plNormalized: 'Skyr',
+    category: 'lacteos_huevos',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+
+  // --- QUESOS Y EMBUTIDOS (embutidos_quesos) ---
+  {
+    plKeywords: ['ser gouda', 'ser edamski', 'ser żółty', 'ser zolty', 'ser królewski', 'ser cheddar', 'ser podlaski', 'ser emmentaler', 'ser tarty', 'ser'],
+    esName: 'Queso',
+    enName: 'Cheese',
+    plNormalized: 'Ser żółty',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 21,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['mozzarella'],
+    esName: 'Queso Mozzarella',
+    enName: 'Mozzarella cheese',
+    plNormalized: 'Mozzarella',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 10,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['parmezan', 'grana padano', 'parmigiano'],
+    esName: 'Parmesano / Grana Padano',
+    enName: 'Parmesan cheese',
+    plNormalized: 'Parmezan',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 45,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['szynka konserw', 'szynka wieprz', 'szynka z piersi', 'szynka'],
+    esName: 'Jamón cocido',
+    enName: 'Ham',
+    plNormalized: 'Szynka',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 7,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['parówki z szynki', 'parowki z szynki', 'berlinki', 'parówki', 'parowki'],
+    esName: 'Salchichas (Parówki)',
+    enName: 'Frankfurters (Parówki)',
+    plNormalized: 'Parówki',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 10,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['kiełbasa śląsk', 'kielbasa slask', 'kiełbasa krakow', 'kiełbasa', 'kielbasa'],
+    esName: 'Salchicha polaca (Kiełbasa)',
+    enName: 'Polish sausage (Kiełbasa)',
+    plNormalized: 'Kiełbasa',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 12,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['kabanosy', 'kabanos'],
+    esName: 'Kabanos (embutido fino crujiente)',
+    enName: 'Kabanos sausage snacks',
+    plNormalized: 'Kabanosy',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 20,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['boczek wędz', 'boczek parz', 'boczek'],
+    esName: 'Panceta / Bacon',
+    enName: 'Bacon / Pork belly',
+    plNormalized: 'Boczek',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 10,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['polędwica', 'poledwica'],
+    esName: 'Lomo embuchado / Fiambre',
+    enName: 'Pork loin cold cut',
+    plNormalized: 'Polędwica',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 8,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['salami'],
+    esName: 'Salami en lonchas',
+    enName: 'Salami',
+    plNormalized: 'Salami',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 21,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['pasztet'],
+    esName: 'Paté',
+    enName: 'Pâté',
+    plNormalized: 'Pasztet',
+    category: 'embutidos_quesos',
+    shelfLifeDays: 7,
+    location: 'fridge',
+  },
+
+  // --- CARNES Y AVES (carnes_aves) ---
+  {
+    plKeywords: ['filet z piersi kurczaka', 'pierś z kurczaka', 'piers z kurczaka', 'kurczak filet', 'kurczak'],
+    esName: 'Pechuga de pollo fresca',
+    enName: 'Fresh chicken breast',
+    plNormalized: 'Filet z piersi kurczaka',
+    category: 'carnes_aves',
+    shelfLifeDays: 3,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['udziec z kurczaka', 'podudzie z kurczaka', 'udka z kurczaka', 'udko'],
+    esName: 'Muslos de pollo',
+    enName: 'Chicken thighs',
+    plNormalized: 'Udka z kurczaka',
+    category: 'carnes_aves',
+    shelfLifeDays: 3,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['skrzydełka z kurczaka', 'skrzydelka'],
+    esName: 'Alitas de pollo',
+    enName: 'Chicken wings',
+    plNormalized: 'Skrzydełka z kurczaka',
+    category: 'carnes_aves',
+    shelfLifeDays: 3,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['filet z indyka', 'pierś z indyka', 'indyk'],
+    esName: 'Pechuga / Filete de pavo',
+    enName: 'Turkey breast',
+    plNormalized: 'Filet z indyka',
+    category: 'carnes_aves',
+    shelfLifeDays: 3,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['mięso mielone wieprz', 'mieso mielone wieprz', 'mięso mielone woł', 'mięso mielone', 'mieso mielone'],
+    esName: 'Carne picada fresca',
+    enName: 'Minced meat',
+    plNormalized: 'Mięso mielone',
+    category: 'carnes_aves',
+    shelfLifeDays: 2,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['schab bez kości', 'schab b/k', 'schab'],
+    esName: 'Lomo de cerdo fresco',
+    enName: 'Pork loin',
+    plNormalized: 'Schab',
+    category: 'carnes_aves',
+    shelfLifeDays: 4,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['karkówka bez kości', 'karkowka b/k', 'karkówka', 'karkowka'],
+    esName: 'Cabecero / Aguja de cerdo (Karkówka)',
+    enName: 'Pork neck (Karkówka)',
+    plNormalized: 'Karkówka',
+    category: 'carnes_aves',
+    shelfLifeDays: 4,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['żeberka wieprz', 'zeberka wieprz', 'żeberka', 'zeberka'],
+    esName: 'Costillas de cerdo',
+    enName: 'Pork ribs',
+    plNormalized: 'Żeberka wieprzowe',
+    category: 'carnes_aves',
+    shelfLifeDays: 4,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['wołowina', 'wolowina', 'rostbef', 'antrykot'],
+    esName: 'Carne de vacuno / Ternera',
+    enName: 'Beef steak / cuts',
+    plNormalized: 'Wołowina',
+    category: 'carnes_aves',
+    shelfLifeDays: 4,
+    location: 'fridge',
+  },
+
+  // --- PESCADOS Y MARISCOS (pescados_mariscos) ---
+  {
+    plKeywords: ['łosoś świeży', 'losos swiezy', 'łosoś filet', 'łosoś wędzony', 'łosoś', 'losos'],
+    esName: 'Salmón',
+    enName: 'Salmon',
+    plNormalized: 'Łosoś',
+    category: 'pescados_mariscos',
+    shelfLifeDays: 3,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['dorsz filet', 'dorsz'],
+    esName: 'Bacalao fresco',
+    enName: 'Cod fillet',
+    plNormalized: 'Dorsz filet',
+    category: 'pescados_mariscos',
+    shelfLifeDays: 2,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['pstrąg', 'pstrag'],
+    esName: 'Trucha fresca',
+    enName: 'Trout',
+    plNormalized: 'Pstrąg',
+    category: 'pescados_mariscos',
+    shelfLifeDays: 2,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['śledź w oleju', 'sledz w oleju', 'śledź', 'sledz', 'matias'],
+    esName: 'Arenque',
+    enName: 'Herring',
+    plNormalized: 'Śledź',
+    category: 'pescados_mariscos',
+    shelfLifeDays: 14,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['makrela wędzona', 'makrela wedzona', 'makrela'],
+    esName: 'Caballa ahumada / fresca',
+    enName: 'Mackerel',
+    plNormalized: 'Makrela',
+    category: 'pescados_mariscos',
+    shelfLifeDays: 5,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['krewetki'],
+    esName: 'Langostinos / Gambas',
+    enName: 'Shrimps / Prawns',
+    plNormalized: 'Krewetki',
+    category: 'pescados_mariscos',
+    shelfLifeDays: 3,
+    location: 'fridge',
+  },
+
+  // --- PANADERÍA Y BOLLERÍA (panaderia_pasteleria) ---
+  {
+    plKeywords: ['chleb tostowy'],
+    esName: 'Pan de molde tostado',
+    enName: 'Toast bread',
+    plNormalized: 'Chleb tostowy',
+    category: 'panaderia_pasteleria',
+    shelfLifeDays: 10,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['chleb pszenny', 'chleb żytni', 'chleb zytni', 'chleb wiejski', 'chleb'],
+    esName: 'Pan fresco de panadería',
+    enName: 'Bread loaf',
+    plNormalized: 'Chleb',
+    category: 'panaderia_pasteleria',
+    shelfLifeDays: 4,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['kajzerka', 'kajzerki', 'bułka pszenn', 'bulka pszenn', 'bułka', 'bulka', 'bułki', 'bulki'],
+    esName: 'Panecillos (Kajzerka / Bułka)',
+    enName: 'Bread rolls',
+    plNormalized: 'Bułka kajzerka',
+    category: 'panaderia_pasteleria',
+    shelfLifeDays: 3,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['bagietka'],
+    esName: 'Baguette',
+    enName: 'Baguette',
+    plNormalized: 'Bagietka',
+    category: 'panaderia_pasteleria',
+    shelfLifeDays: 2,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['tortilla'],
+    esName: 'Tortillas de trigo',
+    enName: 'Wheat tortillas',
+    plNormalized: 'Tortilla',
+    category: 'panaderia_pasteleria',
+    shelfLifeDays: 21,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['pączek', 'paczek', 'pączki', 'paczki'],
+    esName: 'Berlina rellena (Pączek)',
+    enName: 'Donut (Pączek)',
+    plNormalized: 'Pączek',
+    category: 'panaderia_pasteleria',
+    shelfLifeDays: 2,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['drożdżówka', 'drozdzowka'],
+    esName: 'Bollo dulce de repostería',
+    enName: 'Sweet pastry bun',
+    plNormalized: 'Drożdżówka',
+    category: 'panaderia_pasteleria',
+    shelfLifeDays: 3,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['croissant', 'rogal'],
+    esName: 'Cruasán',
+    enName: 'Croissant',
+    plNormalized: 'Croissant',
+    category: 'panaderia_pasteleria',
+    shelfLifeDays: 3,
+    location: 'pantry',
+  },
+
+  // --- DESPENSA Y CONSERVAS (despensa_conservas) ---
+  {
+    plKeywords: ['makaron spaghetti', 'makaron penne', 'makaron świderki', 'makaron'],
+    esName: 'Pasta',
+    enName: 'Pasta',
+    plNormalized: 'Makaron',
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['ryż basmati', 'ryż biały', 'ryz bialy', 'ryż', 'ryz'],
+    esName: 'Arroz',
+    enName: 'Rice',
+    plNormalized: 'Ryż',
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['kasza gryczana', 'kasza jaglana', 'kasza jęczmienna', 'kasza kuskus', 'kasza'],
+    esName: 'Trigo sarraceno / Granos (Kasza)',
+    enName: 'Buckwheat / Groats',
+    plNormalized: 'Kasza',
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['płatki owsiane', 'platki owsiane'],
+    esName: 'Copos de avena',
+    enName: 'Oatmeal / Rolled oats',
+    plNormalized: 'Płatki owsiane',
+    category: 'despensa_conservas',
+    shelfLifeDays: 180,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['mąka pszenna', 'maka pszenna', 'mąka', 'maka'],
+    esName: 'Harina de trigo',
+    enName: 'Flour',
+    plNormalized: 'Mąka',
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['cukier'],
+    esName: 'Azúcar',
+    enName: 'Sugar',
+    plNormalized: 'Cukier',
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['sól', 'sol'],
+    esName: 'Sal',
+    enName: 'Salt',
+    plNormalized: 'Sól',
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['olej rzepakowy', 'olej słonecznikowy', 'olej'],
+    esName: 'Aceite vegetal',
+    enName: 'Cooking oil',
+    plNormalized: 'Olej',
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['oliwa z oliwek', 'oliwa'],
+    esName: 'Aceite de oliva virgen',
+    enName: 'Olive oil',
+    plNormalized: 'Oliwa z oliwek',
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['tuńczyk w sosie', 'tuńczyk w kawałkach', 'tunczyk w kawalkach', 'tuńczyk', 'tunczyk'],
+    esName: 'Atún en lata',
+    enName: 'Canned tuna',
+    plNormalized: 'Tuńczyk w puszce',
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['ketchup'],
+    esName: 'Kétchup',
+    enName: 'Ketchup',
+    plNormalized: 'Ketchup',
+    category: 'despensa_conservas',
+    shelfLifeDays: 180,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['majonez'],
+    esName: 'Mayonesa',
+    enName: 'Mayonnaise',
+    plNormalized: 'Majonez',
+    category: 'despensa_conservas',
+    shelfLifeDays: 90,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['musztarda'],
+    esName: 'Mostaza',
+    enName: 'Mustard',
+    plNormalized: 'Musztarda',
+    category: 'despensa_conservas',
+    shelfLifeDays: 180,
+    location: 'fridge',
+  },
+  {
+    plKeywords: ['kawa ziarnista', 'kawa mielona', 'kawa rozpuszczalna', 'kawa'],
+    esName: 'Café',
+    enName: 'Coffee',
+    plNormalized: 'Kawa',
+    category: 'despensa_conservas',
+    shelfLifeDays: 180,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['herbata czarna', 'herbata zielona', 'herbata'],
+    esName: 'Té',
+    enName: 'Tea',
+    plNormalized: 'Herbata',
+    category: 'despensa_conservas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['czekolada'],
+    esName: 'Chocolate',
+    enName: 'Chocolate',
+    plNormalized: 'Czekolada',
+    category: 'despensa_conservas',
+    shelfLifeDays: 180,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['ciastka', 'ciasteczka', 'wafle', 'wafelki'],
+    esName: 'Galletas / Barquillos',
+    enName: 'Cookies / Wafers',
+    plNormalized: 'Ciastka',
+    category: 'despensa_conservas',
+    shelfLifeDays: 90,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['chipsy', 'chrupki'],
+    esName: 'Patatas fritas / Snacks',
+    enName: 'Crisps / Potato chips',
+    plNormalized: 'Chipsy',
+    category: 'despensa_conservas',
+    shelfLifeDays: 90,
+    location: 'pantry',
+  },
+
+  // --- CONGELADOS (congelados) ---
+  {
+    plKeywords: ['pierogi z mięsem', 'pierogi ruskie', 'pierogi z kapustą', 'pierogi'],
+    esName: 'Pierogi (Empanadillas polacas)',
+    enName: 'Pierogi dumplings',
+    plNormalized: 'Pierogi',
+    category: 'congelados',
+    shelfLifeDays: 90,
+    location: 'freezer',
+  },
+  {
+    plKeywords: ['pizza mrożona', 'pizza mrozona', 'pizza'],
+    esName: 'Pizza',
+    enName: 'Pizza',
+    plNormalized: 'Pizza',
+    category: 'congelados',
+    shelfLifeDays: 60,
+    location: 'freezer',
+  },
+  {
+    plKeywords: ['lody'],
+    esName: 'Helado',
+    enName: 'Ice cream',
+    plNormalized: 'Lody',
+    category: 'congelados',
+    shelfLifeDays: 90,
+    location: 'freezer',
+  },
+  {
+    plKeywords: ['frytki'],
+    esName: 'Patatas prefritas congeladas',
+    enName: 'Frozen fries',
+    plNormalized: 'Frytki',
+    category: 'congelados',
+    shelfLifeDays: 120,
+    location: 'freezer',
+  },
+
+  // --- BEBIDAS (bebidas) ---
+  {
+    plKeywords: ['woda niegazowana', 'woda gazowana', 'woda źródlana', 'woda mineralna', 'woda'],
+    esName: 'Agua mineral',
+    enName: 'Mineral water',
+    plNormalized: 'Woda mineralna',
+    category: 'bebidas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['sok pomarańczowy', 'sok jabłkowy', 'sok'],
+    esName: 'Zumo de fruta',
+    enName: 'Fruit juice',
+    plNormalized: 'Sok owocowy',
+    category: 'bebidas',
+    shelfLifeDays: 60,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['piwo', 'beer'],
+    esName: 'Cerveza',
+    enName: 'Beer',
+    plNormalized: 'Piwo',
+    category: 'bebidas',
+    shelfLifeDays: 120,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['wino'],
+    esName: 'Vino',
+    enName: 'Wine',
+    plNormalized: 'Wino',
+    category: 'bebidas',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+
+  // --- LIMPIEZA Y HOGAR (limpieza_hogar) ---
+  {
+    plKeywords: ['papier toaletowy', 'papier toalet'],
+    esName: 'Papel higiénico',
+    enName: 'Toilet paper',
+    plNormalized: 'Papier toaletowy',
+    category: 'limpieza_hogar',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['ręcznik papierowy', 'recznik papierowy', 'ręcznik kuchenny'],
+    esName: 'Papel de cocina',
+    enName: 'Kitchen paper towel',
+    plNormalized: 'Ręcznik papierowy',
+    category: 'limpieza_hogar',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['płyn do naczyń', 'plyn do naczyn', 'fairy'],
+    esName: 'Lavavajillas a mano',
+    enName: 'Dishwashing liquid',
+    plNormalized: 'Płyn do naczyń',
+    category: 'limpieza_hogar',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['mydło w płynie', 'mydlo w plynie', 'mydło', 'mydlo'],
+    esName: 'Jabón de manos',
+    enName: 'Hand soap',
+    plNormalized: 'Mydło',
+    category: 'limpieza_hogar',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['szampon do włosów', 'szampon'],
+    esName: 'Champú',
+    enName: 'Shampoo',
+    plNormalized: 'Szampon',
+    category: 'limpieza_hogar',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+  {
+    plKeywords: ['kapsułki do prania', 'proszek do prania'],
+    esName: 'Detergente para lavadora',
+    enName: 'Laundry detergent',
+    plNormalized: 'Detergent do prania',
+    category: 'limpieza_hogar',
+    shelfLifeDays: 365,
+    location: 'pantry',
+  },
+];
+
+/**
+ * Normaliza y traduce un nombre de producto de un ticket de supermercado polaco al idioma del usuario (ES / EN / PL)
+ */
+export function translateAndNormalizePolishProduct(
+  rawName: string,
+  targetLang: Language = 'es'
+): {
+  normalizedName: string;
+  categoryId: string;
+  shelfLifeDays: number;
+  suggestedLocation: 'fridge' | 'freezer' | 'pantry';
+} {
+  const cleanInput = String(rawName || '')
+    .replace(/^[\*\-\+#]+/, '')
+    .replace(/^(?:OP\.|OPUST|RABAT|PROMOCJA|UPUST)\s*/i, '')
+    .replace(/\s+\d+(?:[\.,]\d+)?\s*(?:szt\.?|kg|op\.?)?\s*[x\*×]\s*\d+[\.,]\d{2}.*$/i, '')
+    .replace(/\s+[A-G]$/i, '')
+    .replace(/[\-\–\—\s]+$/, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  const lower = cleanInput.toLowerCase();
+
+  // 1. Extraer tamaño / peso si viene incluido (ej: 450g, 1kg, 500ml, 2x, 0.5l)
+  const sizeMatch = cleanInput.match(/\b(\d+(?:[\.,]\d+)?\s*(?:g|kg|ml|l|szt\.?))\b/i);
+  const sizeSuffix = sizeMatch ? ` ${sizeMatch[1].toLowerCase()}` : '';
+
+  // 2. Extraer calificadores comunes (luz = a granel, bio = bio)
+  const isLuz = /\bluz\b/i.test(lower);
+  const isBio = /\b(?:bio|eko)\b/i.test(lower);
+
+  // 3. Buscar coincidencia en el diccionario de supermercado
+  for (const entry of POLISH_GROCERY_DICTIONARY) {
+    for (const kw of entry.plKeywords) {
+      if (lower.includes(kw.toLowerCase())) {
+        let baseName = '';
+        if (targetLang === 'es') {
+          baseName = entry.esName;
+        } else if (targetLang === 'en') {
+          baseName = entry.enName;
+        } else {
+          baseName = entry.plNormalized;
+        }
+
+        // Agregar modificador "a granel" / "luz" si aplica
+        if (isLuz && !baseName.toLowerCase().includes('granel') && !baseName.toLowerCase().includes('bulk') && !baseName.toLowerCase().includes('luz')) {
+          if (targetLang === 'es') baseName += ' a granel';
+          else if (targetLang === 'en') baseName += ' (bulk)';
+          else baseName += ' luz';
+        }
+
+        // Agregar prefijo BIO si aplica
+        if (isBio && !baseName.toLowerCase().includes('bio')) {
+          baseName = `Bio ${baseName}`;
+        }
+
+        // Agregar tamaño/peso si no está ya en el nombre base
+        if (sizeSuffix && !baseName.toLowerCase().includes(sizeSuffix.trim())) {
+          baseName += sizeSuffix;
+        }
+
+        return {
+          normalizedName: baseName,
+          categoryId: entry.category,
+          shelfLifeDays: entry.shelfLifeDays,
+          suggestedLocation: entry.location,
+        };
+      }
+    }
+  }
+
+  // 4. Si no hubo coincidencia exacta en el diccionario:
+  // Aplicar limpieza de texto y capitalización, preservando el nombre pero formateado limpiamente
+  let fallbackName = cleanInput;
+  if (isLuz) {
+    if (targetLang === 'es') {
+      fallbackName = fallbackName.replace(/\bluz\b/i, '').trim() + ' a granel';
+    } else if (targetLang === 'en') {
+      fallbackName = fallbackName.replace(/\bluz\b/i, '').trim() + ' (bulk)';
+    }
+  }
+
+  // Capitalizar primera letra
+  if (fallbackName.length > 0) {
+    fallbackName = fallbackName.charAt(0).toUpperCase() + fallbackName.slice(1);
+  }
+
+  return {
+    normalizedName: fallbackName,
+    categoryId: 'otros',
+    shelfLifeDays: 14,
+    suggestedLocation: 'pantry',
+  };
+}

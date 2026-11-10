@@ -459,9 +459,9 @@ export const ReceiptReviewModal: React.FC<ReceiptReviewModalProps> = ({
                       }
                       className="text-xs px-2 py-1.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700"
                     >
-                      <option value="fridge">❄️ Nevera</option>
-                      <option value="freezer">🧊 Congelador</option>
-                      <option value="pantry">🧺 Despensa</option>
+                      <option value="fridge">❄️ {t.locationFridge}</option>
+                      <option value="freezer">🧊 {t.locationFreezer}</option>
+                      <option value="pantry">🧺 {t.locationPantry}</option>
                     </select>
 
                     {/* Días de caducidad */}

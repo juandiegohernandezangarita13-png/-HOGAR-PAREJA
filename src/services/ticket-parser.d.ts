@@ -15,5 +15,6 @@ export function parsePolishReceipt(
 export function mapPolishTicketToScannedResult(
   parsedTicket: PolishFiscalTicketParsed,
   rawText?: string,
-  processingTimeMs?: number
+  processingTimeMs?: number,
+  targetLanguage?: import('../i18n/translations').Language
 ): ScannedReceiptResult;

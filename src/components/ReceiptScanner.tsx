@@ -18,7 +18,7 @@ import { parsePolishReceipt, mapPolishTicketToScannedResult } from '../services/
 import { useApp } from '../context/AppContext';
 
 export const ReceiptScanner: React.FC = () => {
-  const { t } = useApp();
+  const { t, language } = useApp();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -104,7 +104,8 @@ export const ReceiptScanner: React.FC = () => {
       const result = mapPolishTicketToScannedResult(
         parsedTicket,
         ocrResult.rawText,
-        ocrResult.totalTimeMs
+        ocrResult.totalTimeMs,
+        language
       );
 
       setScannedResult(result);

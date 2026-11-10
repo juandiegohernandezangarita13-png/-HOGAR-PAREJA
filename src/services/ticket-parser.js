@@ -1,4 +1,5 @@
 import { detectCategoryAndShelfLife, normalizeProductName } from '../data/shelfLifeRules';
+import { translateAndNormalizePolishProduct } from './product-translator';
 
 /**
  * Tiendas polacas soportadas en detección de cabecera
@@ -68,6 +69,7 @@ export function cleanPolishProductName(raw) {
     .replace(/^(?:OP\.|OPUST|RABAT|PROMOCJA|UPUST)\s*/i, '')
     .replace(/\s+\d+(?:[\.,]\d+)?\s*(?:szt\.?|kg|op\.?)?\s*[x\*×]\s*\d+[\.,]\d{2}.*$/i, '')
     .replace(/\s+[A-G]$/i, '')
+    .replace(/[\-\–\—\s]+$/, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
 }
@@ -470,26 +472,48 @@ export async function parsePolishReceipt(ocrLines) {
 /**
  * Transforma la salida estructurada del parser polaco al formato ScannedReceiptResult
  * listo para el modal de verificación interactiva y la despensa compartida.
+ * Traduce automáticamente los nombres al idioma seleccionado por el usuario (ES / EN / PL)
+ * y asigna su categoría y regla de conservación óptima.
  *
  * @param {Awaited<ReturnType<typeof parsePolishReceipt>>} parsedTicket
  * @param {string} [rawText]
  * @param {number} [processingTimeMs]
+ * @param {import('../i18n/translations').Language} [targetLanguage]
  */
-export function mapPolishTicketToScannedResult(parsedTicket, rawText = '', processingTimeMs = 0) {
+export function mapPolishTicketToScannedResult(
+  parsedTicket,
+  rawText = '',
+  processingTimeMs = 0,
+  targetLanguage = 'es'
+) {
   const items = parsedTicket.productos.map((prod, index) => {
-    const normalized = normalizeProductName(prod.nombre);
-    const shelfInfo = detectCategoryAndShelfLife(normalized);
+    // 1. Traducir y normalizar al idioma del usuario (ES / EN / PL)
+    const translation = translateAndNormalizePolishProduct(prod.nombre, targetLanguage);
+
+    let categoryId = translation.categoryId;
+    let suggestedLocation = translation.suggestedLocation;
+    let estimatedShelfLifeDays = translation.shelfLifeDays;
+
+    // 2. Si no encontró categoría específica en el traductor, consultar las reglas de conservación
+    if (categoryId === 'otros') {
+      const fallbackDetection = detectCategoryAndShelfLife(prod.nombre);
+      if (fallbackDetection.categoryId !== 'otros') {
+        categoryId = fallbackDetection.categoryId;
+        suggestedLocation = fallbackDetection.suggestedLocation;
+        estimatedShelfLifeDays = fallbackDetection.shelfLifeDays;
+      }
+    }
 
     return {
       id: `ocr-${Date.now()}-${index}`,
       rawName: prod.rawLine || prod.nombre,
-      normalizedName: normalized,
-      categoryId: shelfInfo.categoryId,
+      normalizedName: translation.normalizedName,
+      categoryId,
       quantity: prod.cantidad || 1,
       unit: 'szt',
       price: prod.precio,
-      suggestedLocation: shelfInfo.suggestedLocation,
-      estimatedShelfLifeDays: shelfInfo.shelfLifeDays,
+      suggestedLocation,
+      estimatedShelfLifeDays,
       selected: true,
     };
   });
