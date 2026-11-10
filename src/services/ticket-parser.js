@@ -82,7 +82,16 @@ export function cleanPolishProductName(raw) {
 function isNoiseProduct(name) {
   const clean = String(name || '').toLowerCase().trim();
   if (clean.length < 2) return true;
-  if (/^(podsuma|suma|razem|ptu|vat|fiskalny|niefiskalny|karta|gotowka|reszta|sprzedaz|spredarz|bdo|nip|nr)/i.test(clean)) return true;
+  // Palabras fiscales en cualquier parte del texto
+  if (/\b(podsuma|podsum|suma|razem|ptu|vat|fiskaln|niefiskaln|karta|gotowk|reszta|sprzeda|spreda|opodatk|bdo|nip|kasa|kasjer|kierownik)\b/i.test(clean)) return true;
+  // Fragmentos de OCR térmico que deforman líneas fiscales (ej: "świe e uw", "swie e uw", "spie e uw")
+  if (/^(?:świe|swie|spie|spre)\s*(?:e\s*)?uw$/i.test(clean)) return true;
+  if (/^(?:uw|pt|vat|pln)$/i.test(clean)) return true;
+  // Palabras compuestas únicamente de fragmentos de 1 o 2 letras (ej: "e uw", "a b c")
+  const words = clean.split(/\s+/).filter(Boolean);
+  const shortWords = words.filter((w) => w.length <= 2);
+  if (words.length >= 2 && shortWords.length === words.length) return true;
+  // Solo números o sin suficientes letras
   if (/^\d+$/.test(clean.replace(/\s+/g, ''))) return true;
   if (clean.replace(/[^a-ząćęłńóśźż]/gi, '').length < 2) return true;
   return false;
@@ -423,6 +432,19 @@ export async function parsePolishReceipt(ocrLines) {
         /^\d{2}[\-\.]\d{3}\b/.test(finalName) ||
         /^(?:NIP|TEL|FAX|NR|KASA|KASY|PTU|STAWKA)\b/i.test(finalName);
 
+      // Regla de corte matemático: Si ya hemos capturado productos y el precio de esta línea
+      // coincide exactamente con la suma de los productos anteriores o con el total detectado de la factura,
+      // es una línea de subtotal/resumen fiscal (ej: "Podsuma: 9,52" o "SPRZEDAŻ OPODATKOWANA C 9,52" leída como "świe e UW 9,52")
+      const currentSum = Math.round(productos.reduce((acc, p) => acc + p.precio, 0) * 100) / 100;
+      if (productos.length > 0) {
+        const matchesCurrentSum = Math.abs(currentSum - priceVal) <= 0.05;
+        const matchesTotal = totalDetectado > 0 && Math.abs(totalDetectado - priceVal) <= 0.05;
+        if (matchesCurrentSum || matchesTotal) {
+          if (totalDetectado === 0) totalDetectado = priceVal;
+          break; // Detener inmediatamente la captura de productos
+        }
+      }
+
       if (!isNoise && priceVal > 0 && priceVal < 5000) {
         productos.push({
           nombre: finalName,
@@ -442,6 +464,36 @@ export async function parsePolishReceipt(ocrLines) {
 
     if (hasLetters && !isAddressOrZip && !looksLikeCutoff) {
       pendingProductName = line;
+    }
+  }
+
+  // 3. Post-procesamiento: Eliminar cualquier línea que haya duplicado el subtotal o suma total del ticket
+  if (productos.length > 1) {
+    const rawSum = Math.round(productos.reduce((acc, p) => acc + p.precio, 0) * 100) / 100;
+    const totalRef = totalDetectado > 0 ? totalDetectado : rawSum;
+    const cleanProds = [];
+
+    for (let k = 0; k < productos.length; k++) {
+      const p = productos[k];
+      const sumOthers = Math.round(
+        productos.filter((_, idx) => idx !== k).reduce((acc, x) => acc + x.precio, 0) * 100
+      ) / 100;
+
+      // Si este producto cuesta exactamente la suma de todos los otros productos,
+      // o cuesta el total del ticket cuando los otros productos ya suman el total:
+      const isSubtotalDuplicate =
+        (sumOthers > 0 && Math.abs(p.precio - sumOthers) <= 0.05) ||
+        (totalRef > 0 && Math.abs(p.precio - totalRef) <= 0.05 && Math.abs(sumOthers - totalRef) <= 0.05);
+
+      if (isSubtotalDuplicate) {
+        continue; // Descartar subtotal colado
+      }
+      cleanProds.push(p);
+    }
+
+    if (cleanProds.length > 0) {
+      productos.length = 0;
+      productos.push(...cleanProds);
     }
   }
 
