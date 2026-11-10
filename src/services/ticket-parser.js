@@ -1,7 +1,7 @@
 import { detectCategoryAndShelfLife, normalizeProductName } from '../data/shelfLifeRules';
 
 /**
- *Tiendas polacas soportadas en detección de cabecera
+ * Tiendas polacas soportadas en detección de cabecera
  */
 const POLISH_STORES = [
   { key: 'BIEDRONKA', patterns: [/BIEDRONKA/i, /JERONIMO\s*MARTINS/i] },
@@ -10,37 +10,40 @@ const POLISH_STORES = [
   { key: 'DINO', patterns: [/\bDINO\b/i, /DINO\s+POLSKA/i] },
   { key: 'AUCHAN', patterns: [/AUCHAN/i] },
   { key: 'CARREFOUR', patterns: [/CARREFOUR/i] },
+  { key: 'NETTO', patterns: [/\bNETTO\b/i] },
+  { key: 'KAUFLAND', patterns: [/KAUFLAND/i] },
 ];
 
 /**
  * Palabras clave de ruido fiscal a ignorar durante la lectura de líneas
  */
 const FISCAL_NOISE_REGEX =
-  /\b(KASY|KASJER|KIEROWNIK|PARAGON\s*FISKALNY|KOD|BDO|PTU|PODATEK|NIP|UL\.|AL\.|SP\.\s*Z\s*O\.O\.|SPÓŁKA|NR\s*SYS|ROZLICZENIE|PLATNOSC|PŁATNOŚĆ|RESZTA| NALEŻNOŚĆ|NALEZNOSC|ZAPŁACONO|ZAPLACONO)\b/i;
+  /\b(PODSUMA|PODSUMOWANIE|KASY|KASJER|KIEROWNIK|PARAGON\s*FISKALNY|NIEFISKALNY|KOD|BDO|PTU|PODATEK|STAWKA|NETTO|BRUTTO|NIP|UL\.|AL\.|SP\.\s*Z\s*O\.O\.|SPÓŁKA|SPOLKA|NR\s*SYS|NR:|ROZLICZENIE|PLATNOSC|PŁATNOŚĆ|RESZTA|NALEŻNOŚĆ|NALEZNOSC|ZAPŁACONO|ZAPLACONO|OPODATKOWANA|OPODATK)\b/i;
 
 /**
  * Palabras clave de corte fiscal inmediato (detienen la captura de productos)
+ * En cuanto se detecta PODSUMA, SUMA, SPRZEDAŻ OPODATKOWANA, etc., los productos han terminado.
  */
 const FISCAL_CUTOFF_REGEX =
-  /\b(SUMA|RAZEM|SPREDARZ\s*OPODATK|SPRZEDA[ŻZ]\s*OPODATK|KARTA|GOT[ÓO]WKA)\b/i;
+  /\b(PODSUMA|PODSUMOWANIE|SUBTOTAL|SUMA\s*PLN|SUMA|RAZEM|SPRZEDA[ŻZ]\s*OPODATK|SPREDARZ\s*OPODATK|DO\s*ZAP[ŁL]ATY|ROZLICZENIE\s*P[ŁL]ATNO[ŚS]CI|KARTA\s*P[ŁL]ATNICZA|KARTA|GOT[ÓO]WKA|GOTOWKA)\b/i;
 
 /**
- * Patrón de precio polaco al final de línea: p.ej. "12,99 A", "4.50 C", "19,99"
+ * Patrón de precio polaco al final de línea: p.ej. "12,99 A", "4.50 C", "19,99", "5,99C"
  */
 const TRAILING_PRICE_REGEX = /(\d+[\.,]\d{2})\s*[A-G]?\s*$/i;
 
 /**
  * Patrón de sublínea de cantidad x precio unitario en tickets polacos:
- * Ej: "1 szt x 4,99", "2 x 3,50 7,00 A", "0,542 kg * 19,99 10,83 C", "1.000 * 5.99"
+ * Ej: "1 x5,99 5,99C", "1 szt x 4,99", "0,294 x11,99 3,53C", "2 x 3,50 7,00 A", "0,542 kg * 19,99 10,83 C"
  */
 const SUBLINE_QTY_PRICE_REGEX =
-  /^(\d+(?:[\.,]\d+)?)\s*(?:szt\.?|kg|g|l|op\.?|opak\.?)?\s*[x\*]\s*(\d+[\.,]\d{2})(?:\s+(\d+[\.,]\d{2})\s*[A-G]?)?\s*$/i;
+  /^(\d+(?:[\.,]\d+)?)\s*(?:szt\.?|kg|g|l|op\.?|opak\.?)?\s*[x\*×]?\s*(\d+[\.,]\d{2})\s*(?:[x\*×]?\s*(\d+[\.,]\d{2})\s*[A-G]?)?\s*$/i;
 
 /**
- * Patrón en una sola línea: "MLEKO UHT 3,2% 2 x 3,49 6,98 C" o "BUŁKA 4 szt * 0,89 3,56 A"
+ * Patrón en una sola línea: "MLEKO UHT 3,2% 2 x 3,49 6,98 C" o "Kukurydza goto. 450g 1 x5,99 5,99C"
  */
 const INLINE_QTY_MULTIPLIER_REGEX =
-  /^(.+?)\s+(\d+(?:[\.,]\d+)?)\s*(?:szt\.?|kg|g|l|op\.?)?\s*[x\*]\s*(\d+[\.,]\d{2})\s+(\d+[\.,]\d{2})\s*[A-G]?\s*$/i;
+  /^(.+?)\s+(\d+(?:[\.,]\d+)?)\s*(?:szt\.?|kg|g|l|op\.?)?\s*[x\*×]?\s*(\d+[\.,]\d{2})\s+(\d+[\.,]\d{2})\s*[A-G]?\s*$/i;
 
 /**
  * Convierte string numérico con coma o punto a float redondeado a 2 decimales
@@ -63,10 +66,24 @@ export function cleanPolishProductName(raw) {
   return String(raw || '')
     .replace(/^[\*\-\+#]+/, '')
     .replace(/^(?:OP\.|OPUST|RABAT|PROMOCJA|UPUST)\s*/i, '')
-    .replace(/\s+\d+(?:[\.,]\d+)?\s*(?:szt\.?|kg|op\.?)?\s*[x\*]\s*\d+[\.,]\d{2}.*$/i, '')
+    .replace(/\s+\d+(?:[\.,]\d+)?\s*(?:szt\.?|kg|op\.?)?\s*[x\*×]\s*\d+[\.,]\d{2}.*$/i, '')
     .replace(/\s+[A-G]$/i, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
+}
+
+/**
+ * Verifica si un texto extraído parece ruido fiscal o metadato en vez de un artículo de despensa
+ * @param {string} name
+ * @returns {boolean}
+ */
+function isNoiseProduct(name) {
+  const clean = String(name || '').toLowerCase().trim();
+  if (clean.length < 2) return true;
+  if (/^(podsuma|suma|razem|ptu|vat|fiskalny|niefiskalny|karta|gotowka|reszta|sprzedaz|spredarz|bdo|nip|nr)/i.test(clean)) return true;
+  if (/^\d+$/.test(clean.replace(/\s+/g, ''))) return true;
+  if (clean.replace(/[^a-ząćęłńóśźż]/gi, '').length < 2) return true;
+  return false;
 }
 
 /**
@@ -224,7 +241,7 @@ export async function parsePolishReceipt(ocrLines) {
   let hora = '00:00';
   let totalDetectado = 0;
 
-  // 1. Detección de cabecera (Tienda, NIP, Fecha y Hora)
+  // 1. Detección global de metadatos (Tienda, NIP, Fecha, Hora y Total)
   for (const line of lines) {
     // Tienda
     if (tienda === 'Sklep Spożywczy') {
@@ -236,7 +253,7 @@ export async function parsePolishReceipt(ocrLines) {
       }
     }
 
-    // NIP (ej: NIP: 779-10-11-327 o NIP 5270206384)
+    // NIP (ej: NIP 7811897358 o NIP: 779-10-11-327)
     if (!nip) {
       const nipMatch = line.match(/NIP[\s:.-]*([0-9\-\s]{10,15})/i);
       if (nipMatch) {
@@ -247,30 +264,37 @@ export async function parsePolishReceipt(ocrLines) {
       }
     }
 
-    // Fecha formato YYYY-MM-DD o YYYY.MM.DD
-    const isoDateMatch = line.match(/\b(20\d{2})[\-\./](0[1-9]|1[0-2])[\-\./](0[1-9]|[12]\d|3[01])\b/);
+    // Fecha: Detectar formatos estándar de caja registradora polaca:
+    // YYYY-MM-DD, YYYY.MM.DD, YYYY/MM/DD
+    const isoDateMatch = line.match(/\b(20\d{2})[\-\.\/](0[1-9]|1[0-2])[\-\.\/](0[1-9]|[12]\d|3[01])\b/);
     if (isoDateMatch) {
       fecha = `${isoDateMatch[1]}-${isoDateMatch[2]}-${isoDateMatch[3]}`;
     } else {
-      // Fecha formato DD-MM-YYYY o DD.MM.YYYY
-      const plDateMatch = line.match(/\b(0[1-9]|[12]\d|3[01])[\-\./](0[1-9]|1[0-2])[\-\./](20\d{2})\b/);
+      // DD-MM-YYYY o DD.MM.YYYY
+      const plDateMatch = line.match(/\b(0[1-9]|[12]\d|3[01])[\-\.\/](0[1-9]|1[0-2])[\-\.\/](20\d{2})\b/);
       if (plDateMatch) {
         fecha = `${plDateMatch[3]}-${plDateMatch[2]}-${plDateMatch[1]}`;
+      } else {
+        // Formato corto YY-MM-DD (ej: 26-09-26)
+        const shortDateMatch = line.match(/\b(2[4-9])[\-\.\/](0[1-9]|1[0-2])[\-\.\/](0[1-9]|[12]\d|3[01])\b/);
+        if (shortDateMatch && fecha === new Date().toISOString().split('T')[0]) {
+          fecha = `20${shortDateMatch[1]}-${shortDateMatch[2]}-${shortDateMatch[3]}`;
+        }
       }
     }
 
-    // Hora formato HH:MM
-    const timeMatch = line.match(/\b([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?\b/);
-    if (timeMatch && hora === '00:00') {
+    // Hora formato HH:MM o HH:MM:SS (evitando fechas como 09-26)
+    const timeMatch = line.match(/(?:^|[^\d\-])([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?(?:[^\d]|$)/);
+    if (timeMatch && (hora === '00:00' || hora === '')) {
       hora = `${timeMatch[1]}:${timeMatch[2]}`;
     }
 
-    // Total explícito en líneas de SUMA / RAZEM
-    if (/\b(SUMA\s*PLN|SUMA|RAZEM|DO\s*ZAP[ŁL]ATY)\b/i.test(line)) {
+    // Total explícito en líneas de SUMA PLN / SUMA / DO ZAPŁATY / RAZEM / PODSUMA
+    if (/\b(SUMA\s*PLN|SUMA|RAZEM|DO\s*ZAP[ŁL]ATY|PODSUMA)\b/i.test(line)) {
       const totalMatch = line.match(/(\d+[\.,]\d{2})/);
       if (totalMatch) {
         const parsedTotal = parsePolishNumber(totalMatch[1]);
-        if (parsedTotal > 0) {
+        if (parsedTotal > 0 && (totalDetectado === 0 || /SUMA\s*PLN/i.test(line))) {
           totalDetectado = parsedTotal;
         }
       }
@@ -280,24 +304,28 @@ export async function parsePolishReceipt(ocrLines) {
   // 2. Extracción de productos y precios con filtrado de ruido y corte fiscal
   const productos = [];
   let pendingProductName = null;
-  let cutoffReached = false;
+  let inProductsSection = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Regla 4: Corte fiscal inmediato al detectar SUMA, RAZEM, SPREDARZ OPODATK., KARTA o GOTÓWKA
-    if (FISCAL_CUTOFF_REGEX.test(line)) {
-      const priceInSum = line.match(/(\d+[\.,]\d{2})/);
-      if (priceInSum && totalDetectado === 0) {
-        totalDetectado = parsePolishNumber(priceInSum[1]);
-      }
-      cutoffReached = true;
-      break;
+    // Marcar inicio de sección de productos tras "PARAGON FISKALNY" o cabecera
+    if (/PARAGON\s*FISKALNY/i.test(line)) {
+      inProductsSection = true;
+      pendingProductName = null;
+      continue;
     }
 
-    if (cutoffReached) break;
+    // Regla 4: Corte fiscal inmediato al detectar PODSUMA, SUMA, RAZEM, SPRZEDAŻ OPODATK., KARTA o GOTÓWKA
+    if (FISCAL_CUTOFF_REGEX.test(line)) {
+      const priceInCutoff = line.match(/(\d+[\.,]\d{2})/);
+      if (priceInCutoff && totalDetectado === 0) {
+        totalDetectado = parsePolishNumber(priceInCutoff[1]);
+      }
+      break; // DETENER INMEDIATAMENTE LA CAPTURA DE PRODUCTOS
+    }
 
-    // Ignorar líneas de la tienda o dirección inicial
+    // Ignorar líneas de cabecera de la tienda o dirección inicial
     if (POLISH_STORES.some((s) => s.patterns.some((rx) => rx.test(line)))) {
       continue;
     }
@@ -321,7 +349,7 @@ export async function parsePolishReceipt(ocrLines) {
       continue;
     }
 
-    // Caso A: Sublínea de cantidad x precio unitario (ej. "1 szt x 4.99" o "2 x 3,50 7,00 A")
+    // Caso A: Sublínea de cantidad x precio unitario (ej. "1 x5,99 5,99C", "0,294 x11,99 3,53C", "2 x 3,50 7,00 A")
     const sublineMatch = line.match(SUBLINE_QTY_PRICE_REGEX);
     if (sublineMatch) {
       if (pendingProductName) {
@@ -332,7 +360,7 @@ export async function parsePolishReceipt(ocrLines) {
           : Math.round(rawQty * unitPrice * 100) / 100;
 
         const cleanName = cleanPolishProductName(pendingProductName);
-        if (cleanName.length >= 2 && lineTotal > 0) {
+        if (!isNoiseProduct(cleanName) && lineTotal > 0) {
           productos.push({
             nombre: cleanName,
             precio: lineTotal,
@@ -345,7 +373,7 @@ export async function parsePolishReceipt(ocrLines) {
       continue;
     }
 
-    // Caso B: Línea completa con multiplicador en línea ("MLEKO 3,2% 2 x 3,49 6,98 C")
+    // Caso B: Línea completa con multiplicador en línea ("Kukurydza goto. 450g 1 x5,99 5,99C")
     const inlineMultiMatch = line.match(INLINE_QTY_MULTIPLIER_REGEX);
     if (inlineMultiMatch) {
       const rawName = inlineMultiMatch[1];
@@ -353,7 +381,7 @@ export async function parsePolishReceipt(ocrLines) {
       const lineTotal = parsePolishNumber(inlineMultiMatch[4]);
       const cleanName = cleanPolishProductName(rawName);
 
-      if (cleanName.length >= 2 && lineTotal > 0) {
+      if (!isNoiseProduct(cleanName) && lineTotal > 0) {
         productos.push({
           nombre: cleanName,
           precio: lineTotal,
@@ -375,7 +403,7 @@ export async function parsePolishReceipt(ocrLines) {
       let qty = 1;
       let cleanedNamePart = namePart;
       const qtyTailMatch = namePart.match(
-        /^(.*?)\s+(\d+(?:[\.,]\d+)?)\s*(?:szt\.?|kg|g|l|op\.?)?\s*[x\*]\s*(\d+[\.,]\d{2})\s*$/i
+        /^(.*?)\s+(\d+(?:[\.,]\d+)?)\s*(?:szt\.?|kg|g|l|op\.?)?\s*[x\*×]\s*(\d+[\.,]\d{2})\s*$/i
       );
       if (qtyTailMatch && qtyTailMatch[1].trim().length >= 2) {
         cleanedNamePart = qtyTailMatch[1].trim();
@@ -387,13 +415,13 @@ export async function parsePolishReceipt(ocrLines) {
         cleanedNamePart || pendingProductName || ''
       );
 
-      // Evitar falsos positivos con fechas o códigos postales
-      const looksLikeMetadata =
+      // Descartar si el nombre es metadato fiscal o ruido de caja
+      const isNoise =
+        isNoiseProduct(finalName) ||
         /^\d{2}[\-\.]\d{3}\b/.test(finalName) ||
-        /^(?:NIP|TEL|FAX|NR|KASA)\b/i.test(finalName) ||
-        finalName.replace(/[^A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]/g, '').length < 2;
+        /^(?:NIP|TEL|FAX|NR|KASA|KASY|PTU|STAWKA)\b/i.test(finalName);
 
-      if (!looksLikeMetadata && priceVal > 0 && priceVal < 5000) {
+      if (!isNoise && priceVal > 0 && priceVal < 5000) {
         productos.push({
           nombre: finalName,
           precio: priceVal,
@@ -405,10 +433,12 @@ export async function parsePolishReceipt(ocrLines) {
       }
     }
 
-    // Caso D: Línea que solo tiene el nombre del producto (el precio viene en la sublínea siguiente)
+    // Caso D: Línea que contiene el nombre del producto (el precio viene en la sublínea siguiente)
     const hasLetters = line.replace(/[^A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]/g, '').length >= 3;
     const isAddressOrZip = /\b\d{2}-\d{3}\b/.test(line);
-    if (hasLetters && !isAddressOrZip) {
+    const looksLikeCutoff = FISCAL_CUTOFF_REGEX.test(line) || FISCAL_NOISE_REGEX.test(line);
+
+    if (hasLetters && !isAddressOrZip && !looksLikeCutoff) {
       pendingProductName = line;
     }
   }

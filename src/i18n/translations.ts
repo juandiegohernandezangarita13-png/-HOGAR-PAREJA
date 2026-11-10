@@ -165,6 +165,12 @@ export interface TranslationDictionary {
   expiresToday: string;
   expiresInDays: string;
   goodForDays: string;
+
+  // Bottom Ad Space
+  adBadge: string;
+  adTitle: string;
+  adSponsorHint: string;
+  adSamplePromo: string;
 }
 
 export const TRANSLATIONS: Record<Language, TranslationDictionary> = {
@@ -333,6 +339,12 @@ export const TRANSLATIONS: Record<Language, TranslationDictionary> = {
     expiresToday: 'Termin upływa dzisiaj',
     expiresInDays: 'Ważne jeszcze {DAYS} dni',
     goodForDays: 'Ważne {DAYS} dni',
+
+    // Bottom Ad Space
+    adBadge: 'REKLAMA',
+    adTitle: 'Przestrzeń reklamowa',
+    adSponsorHint: 'Miejsce zarezerwowane na baner Google AdMob / AdSense',
+    adSamplePromo: 'Oszczędzaj na zakupach i planuj posiłki dla dwojga z ComprAI',
   },
 
   es: {
@@ -500,6 +512,12 @@ export const TRANSLATIONS: Record<Language, TranslationDictionary> = {
     expiresToday: 'Caduca hoy',
     expiresInDays: 'Caduca en {DAYS} día(s)',
     goodForDays: 'Vence en {DAYS} días',
+
+    // Bottom Ad Space
+    adBadge: 'PUBLICIDAD',
+    adTitle: 'Espacio publicitario',
+    adSponsorHint: 'Espacio reservado para banner Google AdMob / AdSense',
+    adSamplePromo: 'Planifica tus compras y ahorra en el supermercado con ComprAI',
   },
 
   en: {
@@ -667,6 +685,12 @@ export const TRANSLATIONS: Record<Language, TranslationDictionary> = {
     expiresToday: 'Expires today',
     expiresInDays: 'Expires in {DAYS} day(s)',
     goodForDays: 'Good for {DAYS} days',
+
+    // Bottom Ad Space
+    adBadge: 'ADVERTISEMENT',
+    adTitle: 'Ad Space',
+    adSponsorHint: 'Reserved slot for Google AdMob / AdSense banner',
+    adSamplePromo: 'Save on grocery shopping and plan meals together with ComprAI',
   },
 };
 

@@ -5,6 +5,7 @@ import { PantryView } from './components/PantryView';
 import { ReceiptScanner } from './components/ReceiptScanner';
 import { ShareHouseholdModal } from './components/ShareHouseholdModal';
 import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
+import { BottomAdBanner } from './components/BottomAdBanner';
 import { useApp } from './context/AppContext';
 import { initializeNativeApp } from './services/nativePlugins';
 import { ShoppingCart, Package, ScanLine, Sparkles, ShieldCheck } from 'lucide-react';
@@ -24,7 +25,7 @@ export const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col pb-20 sm:pb-8">
+    <div className="min-h-screen flex flex-col pb-36 sm:pb-12">
       {/* Top Navbar */}
       <Header />
       <ShareHouseholdModal />
@@ -39,6 +40,9 @@ export const App: React.FC = () => {
         {activeTab === 'pantry' && <PantryView />}
         {activeTab === 'scanner' && <ReceiptScanner />}
       </main>
+
+      {/* Bottom Ad Space (Desktop Banner above footer / Mobile Floating Dock) */}
+      <BottomAdBanner />
 
       {/* Footer */}
       <footer className="mt-auto border-t border-slate-200 py-6 text-center text-xs text-slate-400">
