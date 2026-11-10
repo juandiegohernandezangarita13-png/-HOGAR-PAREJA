@@ -64,6 +64,17 @@ export interface TranslationDictionary {
   restockNote: string;
   deleteItem: string;
 
+  // Pantry Gallery & Search
+  pantryViewModeGallery: string;
+  pantryViewModeList: string;
+  pantryGallerySectionTitle: string;
+  pantryGallerySectionSubtitle: string;
+  pantryBackToCategories: string;
+  pantryItemsCountLabel: string;
+  pantryItemsEmptyCategory: string;
+  pantrySearchResultsCount: string;
+  pantryClearSearch: string;
+
   // Manual Add Modal
   manualModalTitle: string;
   productNameLabel: string;
@@ -238,6 +249,17 @@ export const TRANSLATIONS: Record<Language, TranslationDictionary> = {
     restockNote: 'Uzupełnij (zużyte ze spiżarni)',
     deleteItem: 'Usuń ze spiżarni',
 
+    // Pantry Gallery & Search
+    pantryViewModeGallery: 'Galeria kategorii',
+    pantryViewModeList: 'Pełna lista',
+    pantryGallerySectionTitle: 'Kategorie spiżarni',
+    pantryGallerySectionSubtitle: 'Wybierz kategorię, aby sprawdzić dostępne artykuły',
+    pantryBackToCategories: 'Wszystkie kategorie',
+    pantryItemsCountLabel: '{COUNT} art.',
+    pantryItemsEmptyCategory: 'Brak artykułów w tej kategorii',
+    pantrySearchResultsCount: 'Znaleziono {COUNT} art.',
+    pantryClearSearch: 'Wyczyść wyszukiwanie',
+
     // Manual Add Modal
     manualModalTitle: 'Dodaj produkt do Spiżarni',
     productNameLabel: 'Nazwa produktu',
@@ -411,6 +433,17 @@ export const TRANSLATIONS: Record<Language, TranslationDictionary> = {
     restockNote: 'Reponer (Consumido de despensa)',
     deleteItem: 'Eliminar de la despensa',
 
+    // Pantry Gallery & Search
+    pantryViewModeGallery: 'Galería por categorías',
+    pantryViewModeList: 'Lista completa',
+    pantryGallerySectionTitle: 'Galería de la Despensa',
+    pantryGallerySectionSubtitle: 'Toca una categoría para ver los alimentos guardados',
+    pantryBackToCategories: 'Todas las categorías',
+    pantryItemsCountLabel: '{COUNT} art.',
+    pantryItemsEmptyCategory: 'No hay artículos guardados en esta categoría',
+    pantrySearchResultsCount: 'Encontrados {COUNT} artículo(s)',
+    pantryClearSearch: 'Limpiar búsqueda',
+
     // Manual Add Modal
     manualModalTitle: 'Añadir a la Despensa',
     productNameLabel: 'Nombre del Producto',
@@ -583,6 +616,17 @@ export const TRANSLATIONS: Record<Language, TranslationDictionary> = {
     actionRestock: 'Restock',
     restockNote: 'Restock (Consumed from pantry)',
     deleteItem: 'Delete from pantry',
+
+    // Pantry Gallery & Search
+    pantryViewModeGallery: 'Category Gallery',
+    pantryViewModeList: 'Full List',
+    pantryGallerySectionTitle: 'Pantry Categories',
+    pantryGallerySectionSubtitle: 'Tap a category card to view stored items',
+    pantryBackToCategories: 'All Categories',
+    pantryItemsCountLabel: '{COUNT} items',
+    pantryItemsEmptyCategory: 'No items stored in this category',
+    pantrySearchResultsCount: 'Found {COUNT} item(s)',
+    pantryClearSearch: 'Clear search',
 
     // Manual Add Modal
     manualModalTitle: 'Add Item to Pantry',

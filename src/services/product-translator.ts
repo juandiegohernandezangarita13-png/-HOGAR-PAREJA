@@ -35,6 +35,15 @@ const POLISH_GROCERY_DICTIONARY: GroceryDictionaryEntry[] = [
     location: 'fridge',
   },
   {
+    plKeywords: ['groszek zielony', 'groszek konserw', 'groszek mroż', 'groszek mroz', 'groszek'],
+    esName: 'Arvejas / Guisantes',
+    enName: 'Green peas',
+    plNormalized: 'Groszek',
+    category: 'frutas_verduras',
+    shelfLifeDays: 7,
+    location: 'fridge',
+  },
+  {
     plKeywords: ['kukurydza goto', 'kukurydza gotow', 'kukurydza kolba'],
     esName: 'Maíz dulce cocido',
     enName: 'Cooked corn',

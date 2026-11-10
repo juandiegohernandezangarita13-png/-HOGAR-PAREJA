@@ -192,9 +192,9 @@ const SPECIFIC_PRODUCT_RULES: ProductPattern[] = [
   // Verduras (ES + PL + EN)
   {
     keywords: [
-      'lechuga', 'espinaca', 'canónigos', 'rucula', 'rúcula', 'brocoli', 'brócoli', 'champinon', 'champiñon', 'champiñón', 'champiñones', 'setas', 'berenjena', 'berenjenas', 'maiz', 'maíz', 'calabacin', 'calabacín',
-      'sałata', 'salata', 'szpinak', 'rukola', 'brokuł', 'brokul', 'pieczark', 'koperek', 'natka', 'szczypior', 'bakłażan', 'baklazan', 'kukurydza',
-      'lettuce', 'spinach', 'arugula', 'rocket', 'broccoli', 'mushroom', 'mushrooms', 'eggplant', 'aubergine', 'corn', 'zucchini',
+      'lechuga', 'espinaca', 'canónigos', 'rucula', 'rúcula', 'brocoli', 'brócoli', 'champinon', 'champiñon', 'champiñón', 'champiñones', 'setas', 'berenjena', 'berenjenas', 'maiz', 'maíz', 'calabacin', 'calabacín', 'arveja', 'arvejas', 'guisante', 'guisantes',
+      'sałata', 'salata', 'szpinak', 'rukola', 'brokuł', 'brokul', 'pieczark', 'koperek', 'natka', 'szczypior', 'bakłażan', 'baklazan', 'kukurydza', 'groszek',
+      'lettuce', 'spinach', 'arugula', 'rocket', 'broccoli', 'mushroom', 'mushrooms', 'eggplant', 'aubergine', 'corn', 'zucchini', 'peas', 'green peas',
     ],
     category: 'frutas_verduras',
     shelfLifeDays: 5,
