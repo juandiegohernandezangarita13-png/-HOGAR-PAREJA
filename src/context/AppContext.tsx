@@ -26,9 +26,12 @@ interface AppContextType {
   showPrivacyModal: boolean;
   setShowPrivacyModal: (show: boolean) => void;
 
-  // Sincronización en Pareja / Hogar Compartido
+  // Sincronización en Pareja / Hogar Compartido (Túnel Privado)
   householdCode: string;
+  tunnelKey: string;
   setHouseholdCode: (code: string) => void;
+  joinPrivateTunnel: (code: string, key: string) => void;
+  regeneratePrivateTunnel: () => void;
   userName: string;
   setUserName: (name: string) => void;
   syncStatus: SyncStatus;
@@ -103,6 +106,64 @@ const INITIAL_PANTRY_ITEMS: PantryItem[] = [];
 const normalizeHouseholdCode = (raw: string) =>
   raw.trim().toUpperCase().replace(/[^A-Z0-9-_]/g, '').slice(0, 24);
 
+const LEGACY_PUBLIC_CODES = new Set(['HOGAR-PAREJA', 'DEFAULT', 'TEST', 'DEMO', 'PUBLIC']);
+
+const randomStringFromAlphabet = (length: number, alphabet: string): string => {
+  const bytes = new Uint8Array(length);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  let out = '';
+  for (let i = 0; i < length; i++) {
+    out += alphabet[bytes[i] % alphabet.length];
+  }
+  return out;
+};
+
+const generatePrivateHouseholdCode = (): string =>
+  `HOGAR-${randomStringFromAlphabet(8, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789')}`;
+
+const generatePrivateTunnelKey = (): string =>
+  randomStringFromAlphabet(24, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
+
+const initPrivateCredentials = (): { code: string; key: string; joinedViaLink: boolean } => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const urlCode = params.get('hogar');
+    const urlKey = params.get('key');
+
+    if (urlCode && urlKey && urlKey.trim().length >= 8) {
+      const cleanCode = normalizeHouseholdCode(urlCode);
+      const cleanKey = urlKey.trim();
+      if (cleanCode && !LEGACY_PUBLIC_CODES.has(cleanCode)) {
+        localStorage.setItem('comprai_household_code', cleanCode);
+        localStorage.setItem('comprai_tunnel_key', cleanKey);
+        const newUrl = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, '', newUrl);
+        return { code: cleanCode, key: cleanKey, joinedViaLink: true };
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  const savedCode = localStorage.getItem('comprai_household_code') || '';
+  const savedKey = localStorage.getItem('comprai_tunnel_key') || '';
+
+  // Si es usuario nuevo o tenía el código público heredado 'HOGAR-PAREJA', crear un túnel privado único
+  if (!savedCode || LEGACY_PUBLIC_CODES.has(savedCode) || savedKey.length < 8) {
+    const newCode = generatePrivateHouseholdCode();
+    const newKey = generatePrivateTunnelKey();
+    localStorage.setItem('comprai_household_code', newCode);
+    localStorage.setItem('comprai_tunnel_key', newKey);
+    return { code: newCode, key: newKey, joinedViaLink: false };
+  }
+
+  return { code: savedCode, key: savedKey, joinedViaLink: false };
+};
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeTab, setActiveTab] = useState<'shopping' | 'pantry' | 'scanner'>('shopping');
   const [showShareModal, setShowShareModal] = useState(false);
@@ -138,24 +199,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return localStorage.getItem('comprai_user_name') || '';
   });
 
-  const [householdCode, setHouseholdCodeState] = useState<string>(() => {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const urlCode = params.get('hogar');
-      if (urlCode) {
-        const clean = normalizeHouseholdCode(urlCode);
-        if (clean) {
-          localStorage.setItem('comprai_household_code', clean);
-          const newUrl = window.location.pathname + window.location.hash;
-          window.history.replaceState({}, '', newUrl);
-          return clean;
-        }
-      }
-    } catch {
-      // ignore
-    }
-    return localStorage.getItem('comprai_household_code') || 'HOGAR-PAREJA';
-  });
+  const initialCredsRef = useRef(initPrivateCredentials());
+  const [householdCode, setHouseholdCodeState] = useState<string>(initialCredsRef.current.code);
+  const [tunnelKey, setTunnelKeyState] = useState<string>(initialCredsRef.current.key);
 
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('connecting');
   const [connectedDevices, setConnectedDevices] = useState<number>(1);
@@ -216,29 +262,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setHouseholdCode = (code: string) => {
     const clean = normalizeHouseholdCode(code);
+    if (!clean || LEGACY_PUBLIC_CODES.has(clean)) return;
     setHouseholdCodeState(clean);
-    if (clean) {
-      localStorage.setItem('comprai_household_code', clean);
-    } else {
-      localStorage.removeItem('comprai_household_code');
-    }
+    localStorage.setItem('comprai_household_code', clean);
   };
 
-  // Empujar cambios locales al servidor compartido
+  const joinPrivateTunnel = (code: string, key: string) => {
+    const cleanCode = normalizeHouseholdCode(code);
+    const cleanKey = String(key || '').trim();
+    if (!cleanCode || LEGACY_PUBLIC_CODES.has(cleanCode) || cleanKey.length < 8) return;
+    setHouseholdCodeState(cleanCode);
+    setTunnelKeyState(cleanKey);
+    localStorage.setItem('comprai_household_code', cleanCode);
+    localStorage.setItem('comprai_tunnel_key', cleanKey);
+  };
+
+  const regeneratePrivateTunnel = () => {
+    const newCode = generatePrivateHouseholdCode();
+    const newKey = generatePrivateTunnelKey();
+    setHouseholdCodeState(newCode);
+    setTunnelKeyState(newKey);
+    localStorage.setItem('comprai_household_code', newCode);
+    localStorage.setItem('comprai_tunnel_key', newKey);
+  };
+
+  // Empujar cambios locales al servidor compartido (autenticado con clave de túnel privada)
   const pushToServer = useCallback(
     async (
       nextShopping: ShoppingItem[],
       nextPantry: PantryItem[],
       nextHashes: string[] = hashesRef.current
     ) => {
-      if (!householdCode) {
+      if (!householdCode || !tunnelKey) {
         setSyncStatus('local');
         return;
       }
       try {
         const res = await fetch(`/api/household/${encodeURIComponent(householdCode)}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'x-tunnel-key': tunnelKey,
+          },
           body: JSON.stringify({
             shoppingItems: nextShopping,
             pantryItems: nextPantry,
@@ -263,7 +328,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSyncStatus('error');
       }
     },
-    [householdCode, userName]
+    [householdCode, tunnelKey, userName]
   );
 
   // Verificar contra base de datos local y remota si el hash SHA-256 ya fue registrado
@@ -276,12 +341,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return true;
       }
 
-      if (householdCode) {
+      if (householdCode && tunnelKey) {
         try {
           const res = await fetch(
             `/api/household/${encodeURIComponent(householdCode)}/receipt-hash/${encodeURIComponent(
               cleanHash
-            )}`
+            )}`,
+            {
+              headers: {
+                'x-tunnel-key': tunnelKey,
+              },
+            }
           );
           if (res.ok) {
             const data = await res.json();
@@ -296,18 +366,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       return false;
     },
-    [householdCode]
+    [householdCode, tunnelKey]
   );
 
   // Obtener o inicializar estado desde el servidor
   const forceSyncNow = useCallback(async () => {
-    if (!householdCode) {
+    if (!householdCode || !tunnelKey) {
       setSyncStatus('local');
       return;
     }
     try {
       setSyncStatus('connecting');
-      const res = await fetch(`/api/household/${encodeURIComponent(householdCode)}`);
+      const res = await fetch(`/api/household/${encodeURIComponent(householdCode)}`, {
+        headers: {
+          'x-tunnel-key': tunnelKey,
+        },
+      });
       if (!res.ok) {
         setSyncStatus('error');
         return;
@@ -337,11 +411,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch {
       setSyncStatus('error');
     }
-  }, [householdCode, pushToServer]);
+  }, [householdCode, tunnelKey, pushToServer]);
 
   // Conexión en tiempo real (Server-Sent Events)
   useEffect(() => {
-    if (!householdCode) {
+    if (!householdCode || !tunnelKey) {
       setSyncStatus('local');
       return;
     }
@@ -352,7 +426,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       householdCode
     )}/stream?clientId=${encodeURIComponent(clientIdRef.current)}&userName=${encodeURIComponent(
       userName || ''
-    )}`;
+    )}&key=${encodeURIComponent(tunnelKey)}`;
 
     const es = new EventSource(streamUrl);
 
@@ -625,6 +699,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setShowPrivacyModal,
         householdCode,
         setHouseholdCode,
+        tunnelKey,
+        joinPrivateTunnel,
+        regeneratePrivateTunnel,
         userName,
         setUserName,
         syncStatus,

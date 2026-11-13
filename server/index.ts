@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 dotenv.config();
@@ -21,12 +22,41 @@ app.use(express.json({ limit: '5mb' }));
 // ==========================================
 interface HouseholdData {
   code: string;
+  tunnelKeyHash?: string;
   shoppingItems: any[];
   pantryItems: any[];
   registeredReceiptHashes: string[];
   updatedAt: number;
   lastUpdatedBy?: string;
 }
+
+const BLOCKED_LEGACY_CODES = new Set(['HOGAR-PAREJA', 'DEFAULT', 'TEST', 'DEMO', 'PUBLIC']);
+
+const hashTunnelKey = (key: string): string =>
+  crypto.createHash('sha256').update(String(key || '').trim()).digest('hex');
+
+const extractTunnelKey = (req: express.Request): string => {
+  const headerKey = req.headers['x-tunnel-key'];
+  const queryKey = req.query.key;
+  if (typeof headerKey === 'string' && headerKey.trim()) return headerKey.trim();
+  if (typeof queryKey === 'string' && queryKey.trim()) return queryKey.trim();
+  return '';
+};
+
+const verifyTunnelKey = (incomingKey: string, storedHash?: string): boolean => {
+  if (!storedHash) return false;
+  if (!incomingKey || incomingKey.length < 8) return false;
+  const incomingHash = hashTunnelKey(incomingKey);
+  const a = Buffer.from(incomingHash, 'hex');
+  const b = Buffer.from(storedHash, 'hex');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+};
+
+const sanitizeHouseholdForClient = (data: HouseholdData) => {
+  const { tunnelKeyHash: _omit, ...rest } = data;
+  return rest;
+};
 
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'households.json');
@@ -122,12 +152,20 @@ const broadcastPresence = (code: string) => {
   });
 };
 
-// Obtener estado actual de un hogar compartido
+// Obtener estado actual de un hogar compartido (requiere clave de túnel privada)
 app.get('/api/household/:code', (req, res) => {
   const code = normalizeCode(req.params.code);
-  if (!code) {
-    return res.status(400).json({ error: 'Código de hogar inválido' });
+  if (!code || BLOCKED_LEGACY_CODES.has(code)) {
+    return res.status(403).json({
+      error: 'Código de hogar no permitido o deshabilitado por seguridad. Genera un túnel privado.',
+    });
   }
+
+  const incomingKey = extractTunnelKey(req);
+  if (!incomingKey || incomingKey.length < 8) {
+    return res.status(401).json({ error: 'Se requiere clave de túnel privada (tunnelKey).' });
+  }
+
   const existing = households.get(code);
   const clients = sseClients.get(code);
 
@@ -140,9 +178,15 @@ app.get('/api/household/:code', (req, res) => {
     });
   }
 
+  if (!verifyTunnelKey(incomingKey, existing.tunnelKeyHash)) {
+    return res.status(403).json({
+      error: 'Clave de túnel privada inválida. Acceso denegado.',
+    });
+  }
+
   return res.json({
     exists: true,
-    ...existing,
+    ...sanitizeHouseholdForClient(existing),
     registeredReceiptHashes: existing.registeredReceiptHashes || [],
     connectedDevices: clients ? clients.size : 0,
   });
@@ -151,8 +195,17 @@ app.get('/api/household/:code', (req, res) => {
 // Verificar si un hash SHA-256 de ticket ya fue registrado en el hogar compartido
 app.get('/api/household/:code/receipt-hash/:hash', (req, res) => {
   const code = normalizeCode(req.params.code);
-  const hash = String(req.params.hash || '').trim().toLowerCase();
+  if (!code || BLOCKED_LEGACY_CODES.has(code)) {
+    return res.status(403).json({ error: 'Código de hogar no permitido.' });
+  }
+
+  const incomingKey = extractTunnelKey(req);
   const existing = households.get(code);
+  if (existing && !verifyTunnelKey(incomingKey, existing.tunnelKeyHash)) {
+    return res.status(403).json({ error: 'Acceso denegado al túnel privado.' });
+  }
+
+  const hash = String(req.params.hash || '').trim().toLowerCase();
   const isDuplicate = Boolean(
     existing &&
       Array.isArray(existing.registeredReceiptHashes) &&
@@ -165,11 +218,20 @@ app.get('/api/household/:code/receipt-hash/:hash', (req, res) => {
   });
 });
 
-// Actualizar estado de un hogar compartido
+// Actualizar estado de un hogar compartido (protegido por clave de túnel privada)
 app.put('/api/household/:code', (req, res) => {
   const code = normalizeCode(req.params.code);
-  if (!code) {
-    return res.status(400).json({ error: 'Código de hogar inválido' });
+  if (!code || BLOCKED_LEGACY_CODES.has(code)) {
+    return res.status(403).json({
+      error: 'Código de hogar público deshabilitado. Usa un túnel privado.',
+    });
+  }
+
+  const incomingKey = extractTunnelKey(req);
+  if (!incomingKey || incomingKey.length < 8) {
+    return res.status(401).json({
+      error: 'Falta la clave de túnel privada.',
+    });
   }
 
   const {
@@ -185,6 +247,14 @@ app.put('/api/household/:code', (req, res) => {
   }
 
   const prev = households.get(code);
+
+  // Si el hogar ya existe, validar que el cliente tenga la clave privada exacta
+  if (prev && !verifyTunnelKey(incomingKey, prev.tunnelKeyHash)) {
+    return res.status(403).json({
+      error: 'Clave de túnel privada inválida. No tienes permiso para modificar este hogar.',
+    });
+  }
+
   const mergedHashes = Array.from(
     new Set([
       ...(prev?.registeredReceiptHashes || []),
@@ -194,6 +264,7 @@ app.put('/api/household/:code', (req, res) => {
 
   const updatedData: HouseholdData = {
     code,
+    tunnelKeyHash: prev?.tunnelKeyHash || hashTunnelKey(incomingKey),
     shoppingItems,
     pantryItems,
     registeredReceiptHashes: mergedHashes,
@@ -204,12 +275,14 @@ app.put('/api/household/:code', (req, res) => {
   households.set(code, updatedData);
   saveHouseholdsToDisk();
 
-  // Notificar en tiempo real al otro teléfono conectado
+  const safeData = sanitizeHouseholdForClient(updatedData);
+
+  // Notificar en tiempo real al otro teléfono conectado en el túnel privado
   broadcastToHousehold(
     code,
     {
       type: 'sync',
-      ...updatedData,
+      ...safeData,
     },
     clientId
   );
@@ -226,6 +299,20 @@ app.put('/api/household/:code', (req, res) => {
 // Stream en tiempo real (Server-Sent Events) para sincronización instantánea entre móviles
 app.get('/api/household/:code/stream', (req, res) => {
   const code = normalizeCode(req.params.code);
+  if (!code || BLOCKED_LEGACY_CODES.has(code)) {
+    return res.status(403).json({ error: 'Código público deshabilitado.' });
+  }
+
+  const incomingKey = extractTunnelKey(req);
+  if (!incomingKey || incomingKey.length < 8) {
+    return res.status(401).json({ error: 'Falta clave de túnel.' });
+  }
+
+  const currentData = households.get(code);
+  if (currentData && !verifyTunnelKey(incomingKey, currentData.tunnelKeyHash)) {
+    return res.status(403).json({ error: 'Clave de túnel inválida.' });
+  }
+
   const clientId = String(req.query.clientId || Math.random().toString(36).substring(2));
   const userName = String(req.query.userName || '');
 
@@ -242,12 +329,11 @@ app.get('/api/household/:code/stream', (req, res) => {
   clients.add(clientObj);
 
   // Enviar estado inicial al conectarse
-  const currentData = households.get(code);
   res.write(
     `data: ${JSON.stringify({
       type: 'init',
       exists: !!currentData,
-      ...(currentData || {}),
+      ...(currentData ? sanitizeHouseholdForClient(currentData) : {}),
       connectedDevices: clients.size,
     })}\n\n`
   );

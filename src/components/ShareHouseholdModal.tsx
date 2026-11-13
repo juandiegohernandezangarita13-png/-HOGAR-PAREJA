@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import {
   Users,
   Heart,
@@ -12,6 +13,8 @@ import {
   Sparkles,
   QrCode,
   Download,
+  Lock,
+  KeyRound,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -21,6 +24,9 @@ export const ShareHouseholdModal: React.FC = () => {
     setShowShareModal,
     householdCode,
     setHouseholdCode,
+    tunnelKey,
+    joinPrivateTunnel,
+    regeneratePrivateTunnel,
     userName,
     setUserName,
     syncStatus,
@@ -36,6 +42,10 @@ export const ShareHouseholdModal: React.FC = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [joinInput, setJoinInput] = useState<string>('');
+  const [joinError, setJoinError] = useState<string>('');
+  const [joinSuccess, setJoinSuccess] = useState<boolean>(false);
 
   useEffect(() => {
     setCodeInput(householdCode);
@@ -55,10 +65,34 @@ export const ShareHouseholdModal: React.FC = () => {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const inviteUrl = `${baseUrl}/?hogar=${encodeURIComponent(householdCode)}&key=${encodeURIComponent(tunnelKey)}`;
+
+  useEffect(() => {
+    if (!showShareModal || !householdCode || !tunnelKey) return;
+    let cancelled = false;
+    QRCode.toDataURL(inviteUrl, {
+      width: 240,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+      color: {
+        dark: '#064e3b',
+        light: '#ffffff',
+      },
+    })
+      .then((url) => {
+        if (!cancelled) setQrDataUrl(url);
+      })
+      .catch((err) => {
+        console.error('QR generation failed:', err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showShareModal, inviteUrl, householdCode, tunnelKey]);
+
   if (!showShareModal) return null;
 
-  const baseUrl = window.location.origin;
-  const inviteUrl = `${baseUrl}/?hogar=${encodeURIComponent(householdCode || 'HOGAR-PAREJA')}`;
   const isLocalhost =
     window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
@@ -71,10 +105,47 @@ export const ShareHouseholdModal: React.FC = () => {
   };
 
   const handleGenerateRandomCode = () => {
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    const newCode = `DOM-${randomNum}`;
-    setCodeInput(newCode);
-    setHouseholdCode(newCode);
+    regeneratePrivateTunnel();
+  };
+
+  const handleJoinTunnel = (e: React.FormEvent) => {
+    e.preventDefault();
+    setJoinError('');
+    setJoinSuccess(false);
+
+    const raw = joinInput.trim();
+    if (!raw) return;
+
+    let parsedCode = '';
+    let parsedKey = '';
+
+    try {
+      if (raw.includes('hogar=') && raw.includes('key=')) {
+        const urlObj = new URL(raw.startsWith('http') ? raw : `${baseUrl}/${raw.replace(/^\/+/, '')}`);
+        parsedCode = urlObj.searchParams.get('hogar') || '';
+        parsedKey = urlObj.searchParams.get('key') || '';
+      } else if (raw.includes('#')) {
+        const parts = raw.split('#');
+        parsedCode = parts[0] || '';
+        parsedKey = parts[1] || '';
+      } else if (raw.includes(':')) {
+        const parts = raw.split(':');
+        parsedCode = parts[0] || '';
+        parsedKey = parts[1] || '';
+      }
+    } catch {
+      // fallback handled below
+    }
+
+    if (!parsedCode.trim() || parsedKey.trim().length < 12) {
+      setJoinError('Pega el enlace privado completo o el código con llave (ej. HOGAR-XXXX#llave).');
+      return;
+    }
+
+    joinPrivateTunnel(parsedCode.trim(), parsedKey.trim());
+    setJoinInput('');
+    setJoinSuccess(true);
+    setTimeout(() => setJoinSuccess(false), 3000);
   };
 
   const handleCopyLink = async () => {
@@ -89,7 +160,7 @@ export const ShareHouseholdModal: React.FC = () => {
 
   const handleCopyCode = async () => {
     try {
-      await navigator.clipboard.writeText(householdCode);
+      await navigator.clipboard.writeText(`${householdCode}#${tunnelKey}`);
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2500);
     } catch {
@@ -110,10 +181,6 @@ export const ShareHouseholdModal: React.FC = () => {
     await deferredPrompt.userChoice;
     setDeferredPrompt(null);
   };
-
-  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=${encodeURIComponent(
-    inviteUrl
-  )}`;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -289,24 +356,32 @@ export const ShareHouseholdModal: React.FC = () => {
                 )}
 
                 <div className="flex flex-col sm:flex-row items-center gap-4">
-                  {/* Código QR escaneable */}
-                  <div className="bg-white p-2 rounded-2xl border border-emerald-200 shadow-sm flex flex-col items-center flex-shrink-0">
-                    <img
-                      src={qrImageUrl}
-                      alt="QR Code"
-                      className="w-32 h-32 rounded-lg"
-                    />
-                    <span className="text-[10px] font-semibold text-slate-500 mt-1 flex items-center gap-1">
-                      <QrCode className="w-3 h-3" /> {t.scanQrHint}
+                  {/* Código QR escaneable (100% local con llave privada) */}
+                  <div className="bg-white p-2.5 rounded-2xl border border-emerald-200 shadow-sm flex flex-col items-center flex-shrink-0">
+                    {qrDataUrl ? (
+                      <img
+                        src={qrDataUrl}
+                        alt="QR Code"
+                        className="w-36 h-36 rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-36 h-36 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 text-xs">
+                        QR...
+                      </div>
+                    )}
+                    <span className="text-[10px] font-semibold text-emerald-700 mt-1.5 flex items-center gap-1">
+                      <Lock className="w-3 h-3" /> {t.scanQrHint}
                     </span>
                   </div>
 
                   {/* Botones de compartir */}
                   <div className="flex-1 w-full space-y-2">
-                    <p className="text-xs text-slate-600 leading-relaxed">
-                      {t.shareDescription}{' '}
-                      <strong className="text-emerald-800">{householdCode}</strong>:
-                    </p>
+                    <div className="flex items-start gap-1.5 bg-white/80 border border-emerald-200 rounded-xl p-2 text-[11px] text-emerald-900 leading-snug">
+                      <Lock className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                      <span>
+                        Túnel privado cifrado: cualquiera que abra la web sin este QR o enlace privado entra a su propio espacio aislado y no puede ver ni cambiar tus productos.
+                      </span>
+                    </div>
 
                     <button
                       type="button"
@@ -336,6 +411,38 @@ export const ShareHouseholdModal: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                {/* Unirse al túnel privado de tu pareja */}
+                <form onSubmit={handleJoinTunnel} className="pt-2 border-t border-emerald-200/70 space-y-1.5">
+                  <label className="text-[11px] font-bold text-emerald-900 flex items-center gap-1">
+                    <KeyRound className="w-3.5 h-3.5 text-emerald-700" />
+                    ¿Tu pareja te envió su enlace o código privado? Pégalo aquí:
+                  </label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={joinInput}
+                      onChange={(e) => {
+                        setJoinInput(e.target.value);
+                        if (joinError) setJoinError('');
+                      }}
+                      placeholder="https://.../?hogar=...&key=... o HOGAR-XXXX#llave"
+                      className="flex-1 px-3 py-1.5 rounded-xl border border-emerald-200 bg-white text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <button
+                      type="submit"
+                      className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition cursor-pointer whitespace-nowrap"
+                    >
+                      Conectar
+                    </button>
+                  </div>
+                  {joinError && <p className="text-[11px] text-rose-600 font-medium">{joinError}</p>}
+                  {joinSuccess && (
+                    <p className="text-[11px] text-emerald-700 font-bold">
+                      ✓ Conectado al túnel privado de tu pareja.
+                    </p>
+                  )}
+                </form>
               </div>
             </>
           ) : (
